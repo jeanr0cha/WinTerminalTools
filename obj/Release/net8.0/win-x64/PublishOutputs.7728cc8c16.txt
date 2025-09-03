@@ -1,0 +1,2 @@
+D:\Jean\WinTerminalTools\src\WinTerminalTools\bin\Release\net8.0\win-x64\publish\WinTerminalTools.pdb
+D:\Jean\WinTerminalTools\src\WinTerminalTools\bin\Release\net8.0\win-x64\publish\WinTerminalTools.exe
