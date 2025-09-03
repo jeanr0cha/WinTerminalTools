@@ -1,0 +1,48 @@
+# .gitignore para projetos .NET / Visual Studio
+# Ignorar bin/ e obj/
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# Build outputs
+*.dll
+*.exe
+*.pdb
+*.cache
+
+# NuGet
+*.nupkg
+**/packages/
+
+# Visual Studio Code
+.vscode/
+
+# Resx
+*.resources
+
+# Publicação
+publish/
+
+# Logs
+*.log
+
+# JetBrains Rider local history
+*.LocalHistory
+
+# Outros
+*.userprefs
+
+# Ignore editor backups
+*~
+*.bak
+
+# OS files
+Thumbs.db
+.DS_Store
