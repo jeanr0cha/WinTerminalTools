@@ -1,6 +1,6 @@
 # WinTerminalTools v1.0
 
-São utilitários de console com interface TUI (Text-based User Interface) para Windows 64 bits, projetada para simplificar as tarefas comuns de linha de comando(CMD ou PowerShell), cada instrução possui uma decrião de sua funcionalidade para facilitar o uso.
+É uma ferramenta de console com interface TUI (Text-based User Interface) para Windows 64 bits, projetada para simplificar as tarefas comuns de linha de comando(CMD ou PowerShell), cada instrução possui uma decrião de sua funcionalidade para facilitar o uso, podendo navegar pelo teclado ou mouse.
 
 ##
 
@@ -13,25 +13,56 @@ O WinTerminalTools, o nome vem de uma União de Ferramentas de terminal do Windo
 A ideia de Usar de usar o C# é pela integração com o Windows, e a ideia da interface Terminal.Gui é pelo fato de ser leve e uma interface mais "limpa e simples". 
 
 ##
+<p align="center">
+   <strong>Funcionalidade Atuais</strong>
+</p>
 
-## Funcionalidade Atuais
+##
 
-    * Interface: Menu, janela e botões diretamente no console.
-    * Menu de IP e Rede: Acesso rápido a todos os subcomandos do ipconfig com descrições e diálogos de confirmação para ações como ipconfig /release
+<p align="center">
+  <strong>Menu principal.</strong>
+</p>
+
+![Menu Principal do WinTerminalTools](Resources/menu-principal.png)
+
+
+<p align="center">
+  <strong>Subcommenu do ipconfig com descrições e diálogos de confirmação para ações como ipconfig /release.</strong>
+</p>
+
+![Sub Menu IP do WinTerminalTools](Resources/Menu-ip-e-rede.png)   
 
 ##
 
 ## Instalação 
-    - 1. Vá para Página Releases do projeto.
-    - 2. Baixe o arquivo .zip da versão mais recente.
-    - 3. Extraia o conteúdo para uma pasta de sua preferência.
-    - 4. Execute o arquivo WinTerminalTools.exe.
+    - 1. Baixe o arquivo WinTerminalTools.rar
+    - 2. Extraia o conteúdo para uma pasta de sua preferência.
+    - 3. Execute o arquivo WinTerminalTools.exe.
 
-## ⚠️ AVISO ⚠️ 
+<h2 align="center">⚠️ AVISO ⚠️</h2>
 
-Como este é um projeto pessoal, o executável não possui uma assinatura de código digital paga. É normal que o Windows exiba um aviso de segurança ao executá-lo pela primeira vez, geralmente não aparece novamente as próximas vezes que for executado.
-    - Ao ver a tela "O Windows protegeu o computador", clique no link de texto "Mais informações".
-    - Em seguida, um novo botão aparecerá. Clique em "Executar mesmo assim".
+### Como este é um projeto pessoal, o executável não possui uma assinatura de código digital paga. É normal que o Windows exiba um aviso de segurança ao executá-lo pela primeira vez, geralmente não aparece novamente as próximas vezes que for executado.
+
+##
+
+<p align="center">
+  <strong>Ao ver a tela "O Windows protegeu o computador", clique no link de texto "Mais informações".</strong>
+</p>
+
+<p align="center">
+  <img src="Resources/Windows-protegeu.png" alt="Windows Protegeu" width="400"/>
+</p>
+
+##
+
+<p align="center">
+  <strong>Em seguida, um novo botão aparecerá. Clique em "Executar mesmo assim".</strong>
+</p>
+
+
+<p align="center">
+  <img src="Resources/executar-mesmo-assim.png" alt="Executar mesmo assim" width="400"/>
+</p>
 
 ##
 
