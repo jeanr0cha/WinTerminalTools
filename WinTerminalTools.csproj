@@ -1,17 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <ApplicationIcon>Resources\Icone.ico</ApplicationIcon>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- Publicação: dotnet publish -c Release -r win-x64 (self-contained false) -->
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Terminal.Gui" Version="1.19.0" />
-    <None Include="Resources\Icone.ico" Pack="true" PackagePath="\" />
+    <Resource Include="Resources\Icone.ico" />
+    <InternalsVisibleTo Include="WinTerminalTools.Tests" />
+  </ItemGroup>
+
+  <!-- Projeto de testes e cópia legada não fazem parte do app -->
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <Compile Remove="src\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+    <Page Remove="tests\**" />
   </ItemGroup>
 
 </Project>

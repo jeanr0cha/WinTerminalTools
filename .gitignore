@@ -46,3 +46,8 @@ publish/
 # OS files
 Thumbs.db
 .DS_Store
+
+# Cópia legada e binários distribuídos (use GitHub Releases)
+src/
+*.rar
+tests/**/TestResults/

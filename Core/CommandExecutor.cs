@@ -6,27 +6,36 @@ namespace WinTerminalTools.Core;
 
 public static class CommandExecutor
 {
+    private static readonly Lazy<Encoding> OemEncoding = new(ResolveOemEncoding);
+
+    private static Encoding ResolveOemEncoding()
+    {
+        try
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            return Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
+        }
+        catch
+        {
+            return Encoding.UTF8;
+        }
+    }
+
+    /// <summary>
+    /// Executa o comando diretamente (sem passar por cmd /c), com cada argumento
+    /// enviado via ArgumentList, o que elimina injeção por metacaracteres do shell.
+    /// </summary>
     public static async Task<(string output, string error, int exitCode)> ExecuteAsync(
-        string command,
+        CommandSpec spec,
         Action<string>? onOutputLine = null,
         Action<string>? onErrorLine = null,
         CancellationToken cancellationToken = default)
     {
-        Encoding encoding;
-        try
-        {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            encoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
-        }
-        catch
-        {
-            encoding = Encoding.UTF8;
-        }
+        var encoding = OemEncoding.Value;
 
         var processStartInfo = new ProcessStartInfo
         {
-            FileName = "cmd.exe",
-            Arguments = $"/c {command}",
+            FileName = spec.FileName,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = encoding,
@@ -34,6 +43,11 @@ public static class CommandExecutor
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        foreach (var arg in spec.Arguments)
+        {
+            processStartInfo.ArgumentList.Add(arg);
+        }
 
         using var process = new Process { StartInfo = processStartInfo };
         var outputBuilder = new StringBuilder();
@@ -89,18 +103,5 @@ public static class CommandExecutor
         }
 
         return (outputBuilder.ToString().TrimEnd(), errorBuilder.ToString().TrimEnd(), process.ExitCode);
-    }
-
-    public static (string output, string error, int exitCode) Execute(string command, int timeoutMs = 120000)
-    {
-        using var cts = new CancellationTokenSource(timeoutMs);
-        try
-        {
-            return ExecuteAsync(command, null, null, cts.Token).GetAwaiter().GetResult();
-        }
-        catch (OperationCanceledException)
-        {
-            return ("", $"O comando excedeu o tempo limite ({timeoutMs / 1000}s) e foi cancelado.", -1);
-        }
     }
 }
