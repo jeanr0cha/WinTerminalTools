@@ -1,6 +1,22 @@
 # WinTerminalTools v1.0
 
-É uma ferramenta de console com interface TUI (Text-based User Interface) para Windows 64 bits, projetada para simplificar as tarefas comuns de linha de comando(CMD ou PowerShell), cada instrução possui uma decrião de sua funcionalidade para facilitar o uso, podendo navegar pelo teclado ou mouse.
+É uma ferramenta com interface gráfica (WPF, .NET 10) para Windows 64 bits, projetada para simplificar as tarefas comuns de linha de comando (CMD ou PowerShell). Cada comando possui uma descrição de sua funcionalidade, a saída aparece em tempo real num console embutido e qualquer execução pode ser cancelada.
+
+> A versão 1.0 original usava Terminal.Gui (TUI); esta versão foi migrada para WPF. As capturas de tela abaixo ainda são da interface antiga.
+
+## Desenvolvimento
+
+```
+dotnet build WinTerminalTools.sln
+dotnet test tests/WinTerminalTools.Tests
+dotnet publish WinTerminalTools.csproj -c Release -r win-x64 --self-contained false
+```
+
+- `Core/CommandExecutor.cs`: executa processos **sem shell** (`ArgumentList`), com cancelamento da árvore de processos.
+- `Core/InputValidator.cs`: valida host/IP, ID do winget, termo de busca e caminho de pasta digitados pelo usuário.
+- `Core/CommandCatalog.cs`: monta cada comando (executável + argumentos).
+- `tests/`: testes xUnit (validação, montagem de comandos e executor com comandos inofensivos).
+- O binário compilado deve ser distribuído pelas *Releases* do GitHub (o workflow em `.github/workflows` publica o artefato).
 
 ##
 
@@ -8,9 +24,9 @@
 
 Resolvi iniciar o desenvolvimento deste projeto com o intuito de aprender mais sobre as ferramentas possíveis a utilizar no CMD, além das convencionais como ipconfig. Também vi nisto uma maneira de aperfeiçoar meu aprendizado em C# e .NET. No momento, o programa possui apenas uma tela e uma configuração navegável, que é o menu do ipconfig e suas demais funcionalidades, mas a minha ideia para as versões futuras é ter diversas outras funções. Existem programas parecidos, mas ainda não encontrei nenhum que implemente as funcionalidades da forma que imagino.
 
-O WinTerminalTools, o nome vem de uma União de Ferramentas de terminal do Windows, ela é uma ferramenta de código aberto construída e idealizada por min em C# e .NET 8, utilizando a biblioteca Terminal.Gui para criar uma interface de usuário interativa que funciona diretamente no seu terminal. O objetivo é centralizar diversos comandos úteis do Windows (como ipconfig, ping, winget, etc.) em um único local de fácil acesso e com instruções sobre o que cada comando executa. Isso evita que o usuário, ao precisar rodar um comando menos conhecido, tenha que pesquisar externamente sua função, pois o próprio programa já fornecerá uma descrição. O executável suporta tanto a navegação por teclado quanto cliques do mouse.
+O WinTerminalTools, o nome vem de uma União de Ferramentas de terminal do Windows, ela é uma ferramenta de código aberto construída e idealizada por min em C# e .NET 10, utilizando WPF para a interface (a v1.0 usava a biblioteca Terminal.Gui). O objetivo é centralizar diversos comandos úteis do Windows (como ipconfig, ping, winget, etc.) em um único local de fácil acesso e com instruções sobre o que cada comando executa. Isso evita que o usuário, ao precisar rodar um comando menos conhecido, tenha que pesquisar externamente sua função, pois o próprio programa já fornecerá uma descrição. O executável suporta tanto a navegação por teclado quanto cliques do mouse.
 
-A ideia de Usar de usar o C# é pela integração com o Windows, e a ideia da interface Terminal.Gui é pelo fato de ser leve e uma interface mais "limpa e simples". 
+A ideia de usar o C# é pela integração com o Windows, e a interface busca ser leve, "limpa e simples".
 
 ##
 <p align="center">
@@ -35,7 +51,7 @@ A ideia de Usar de usar o C# é pela integração com o Windows, e a ideia da in
 ##
 
 ## Instalação 
-    - 1. Baixe o arquivo WinTerminalTools.rar
+    - 1. Baixe o ZIP mais recente na aba Releases do GitHub (requer o .NET 10 Desktop Runtime).
     - 2. Extraia o conteúdo para uma pasta de sua preferência.
     - 3. Execute o arquivo WinTerminalTools.exe.
 
