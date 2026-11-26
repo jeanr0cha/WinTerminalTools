@@ -120,6 +120,36 @@ public static class CommandCatalog
     public static CommandSpec Dir(string folder) =>
         CommandSpec.Create("cmd.exe", "/c", "dir") with { WorkingDirectory = folder };
 
+    // ================= REDE LOCAL: SCRIPTS =================
+
+    /// <summary>Conexão ativa (com roteador) usada pelos scripts de rede local.</summary>
+    private const string ActiveConnection =
+        "$c=@(Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' }); " +
+        "if($c.Count -eq 0){ '✖ Nenhuma conexão com roteador encontrada. Confira o cabo ou o Wi-Fi.'; exit 1 }; ";
+
+    /// <summary>
+    /// Lista os aparelhos de $ips (ou da tabela de vizinhos do Windows) com nome, MAC e marcação de
+    /// roteador/este PC. Nomes vêm do DNS reverso (o roteador costuma informar), com limite de 2 s no total.
+    /// </summary>
+    private const string ListDevices =
+        "$meu=$c[0].IPv4Address[0].IPAddress; $gw=$c[0].IPv4DefaultGateway[0].NextHop; $base=$meu.Substring(0,$meu.LastIndexOf('.')+1); " +
+        "$viz=@{}; Get-NetNeighbor -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { " +
+        "$_.State -ne 'Unreachable' -and $_.IPAddress.StartsWith($base) -and $_.LinkLayerAddress -and " +
+        "$_.LinkLayerAddress -notmatch '^(00-){5}00$|^(FF-){5}FF$' -and -not $_.IPAddress.EndsWith('.255') } | " +
+        "ForEach-Object { $viz[$_.IPAddress]=$_.LinkLayerAddress }; " +
+        "if(-not $ips){ $ips=@($viz.Keys) }; $ips=@(@($ips) + $meu | Sort-Object -Unique { [version]$_ }); " +
+        "$nomes=@{}; $t=@{}; foreach($ip in $ips){ $t[$ip]=[Net.Dns]::GetHostEntryAsync($ip) }; " +
+        "try{ [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($t.Values), 2000) | Out-Null }catch{}; " +
+        "foreach($ip in $ips){ if($t[$ip].Status -eq 'RanToCompletion' -and $t[$ip].Result.HostName -ne $ip){ $nomes[$ip]=$t[$ip].Result.HostName } }; " +
+        "$meuMac=(Get-NetAdapter -InterfaceIndex $c[0].InterfaceIndex).MacAddress; " +
+        "foreach($ip in $ips){ " +
+        "$nome= if($nomes[$ip]){$nomes[$ip]} else {'(sem nome)'}; " +
+        "$tag= if($ip -eq $gw){'  · 📡 roteador'} elseif($ip -eq $meu){'  · 💻 este PC'} else {''}; " +
+        "$mac= if($ip -eq $meu){$meuMac} elseif($viz[$ip]){$viz[$ip]} else {'?'}; " +
+        "'▸ {0,-15}  {1}{2}' -f $ip, $nome, $tag; '    MAC: ' + $mac }; " +
+        "''; 'Total: {0} aparelho(s) na rede {1}0/24.' -f $ips.Count, $base; " +
+        "'Dica: celulares e TVs em repouso podem não aparecer; nomes só aparecem quando o roteador informa.'";
+
     // ================= CATÁLOGO DA INTERFACE =================
 
     /// <summary>Onde o relatório de bateria é salvo (pasta Documentos do usuário).</summary>
@@ -131,6 +161,8 @@ public static class CommandCatalog
     {
         new("network.query", CommandTab.Network, "📊 Consultas de Rede", "Só leitura: não altera nada."),
         new("network.repair", CommandTab.Network, "🛠️ Manutenção & Reparo de Conexão"),
+        new("network.lan", CommandTab.Network, "🖧 Rede Cabeada & Dispositivos",
+            "Placas de rede, sua conexão e quem está conectado na sua rede local."),
         new("network.wifi", CommandTab.Network, "📶 Wi-Fi"),
         new("apps.updates", CommandTab.Apps, "🔄 Programas e Atualizações (Winget)",
             "Verifique quais programas possuem versões novas antes de atualizar."),
@@ -294,6 +326,76 @@ public static class CommandCatalog
                     "• Impacto: IPs fixos são apagados; VPNs e proxies podem precisar ser reconfigurados.\n" +
                     "• É necessário REINICIAR o computador para concluir.\n\n" +
                     "Deseja executar o reparo completo?"
+            },
+
+            // ---------- Rede: cabeada e dispositivos ----------
+            new()
+            {
+                Id = "net-adapters", SectionId = "network.lan",
+                Title = "🔌 Adaptadores de Rede", Description = "Cabo e Wi-Fi: conectado, velocidade, placa e MAC",
+                Steps = new[]
+                {
+                    PowerShell(
+                        "Get-NetAdapter | Sort-Object @{e={$_.Status -ne 'Up'}}, Name | ForEach-Object { " +
+                        "$tipo= if($_.PhysicalMediaType -match '802\\.11|Wireless' -or $_.InterfaceDescription -match 'Wi-?Fi|Wireless'){'📶 Wi-Fi'} " +
+                        "elseif($_.Virtual){'🧩 Virtual'} else {'🔌 Cabo'}; " +
+                        "$estado=switch(\"$($_.Status)\"){ 'Up'{'✔ Conectado'} 'Disconnected'{'✖ Desconectado'} 'Disabled'{'⏸ Desativado'} default{\"$($_.Status)\"} }; " +
+                        "'▸ {0} · {1}' -f $_.Name, $tipo; " +
+                        "'    {0} · Velocidade: {1}' -f $estado, $(if($_.Status -eq 'Up'){$_.LinkSpeed}else{'—'}); " +
+                        "'    Placa: ' + $_.InterfaceDescription; '    MAC: ' + $(if($_.MacAddress){$_.MacAddress}else{'—'}); '' }",
+                        "Get-NetAdapter")
+                },
+                Keywords = "rede cabo ethernet placa adaptador mac velocidade"
+            },
+            new()
+            {
+                Id = "net-connection", SectionId = "network.lan",
+                Title = "🌐 Minha Conexão", Description = "Meu IP, roteador (gateway) e DNS, resumidos",
+                Steps = new[]
+                {
+                    PowerShell(ActiveConnection +
+                        "foreach($i in $c){ '▸ ' + $i.InterfaceAlias; " +
+                        "'    Meu IP:    ' + (($i.IPv4Address | ForEach-Object IPAddress) -join ', '); " +
+                        "'    Roteador:  ' + (($i.IPv4DefaultGateway | ForEach-Object NextHop) -join ', '); " +
+                        "'    DNS:       ' + ((($i.DNSServer | Where-Object AddressFamily -eq 2).ServerAddresses) -join ', '); '' }",
+                        "Get-NetIPConfiguration")
+                },
+                Keywords = "ip gateway roteador dns conexão"
+            },
+            new()
+            {
+                Id = "lan-devices", SectionId = "network.lan",
+                Title = "📋 Dispositivos Conhecidos", Description = "Aparelhos que o PC já viu na rede (rápido, só lê)",
+                Steps = new[] { PowerShell(ActiveConnection + "$ips=$null; " + ListDevices, "Get-NetNeighbor") },
+                Keywords = "dispositivos aparelhos quem está conectado rede local arp"
+            },
+            new()
+            {
+                Id = "lan-scan", SectionId = "network.lan",
+                Title = "📡 Escanear a Rede", Description = "Procura todos os aparelhos ligados agora (5-10 s)",
+                Steps = new[]
+                {
+                    PowerShell(ActiveConnection +
+                        "$meu=$c[0].IPv4Address[0].IPAddress; $base=$meu.Substring(0,$meu.LastIndexOf('.')+1); " +
+                        "'Procurando aparelhos de {0}1 a {0}254...' -f $base; ''; " +
+                        "$p=1..254 | ForEach-Object { (New-Object Net.NetworkInformation.Ping).SendPingAsync($base + $_, 800) }; " +
+                        "try{ [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]$p) }catch{}; " +
+                        "$ips=@(for($n=0; $n -lt 254; $n++){ if($p[$n].Status -eq 'RanToCompletion' -and \"$($p[$n].Result.Status)\" -eq 'Success'){ $base + ($n+1) } }); " +
+                        // Quem não responde ping (ex.: celular com firewall) mas está na tabela do Windows também entra.
+                        "$ips=@($ips + @(Get-NetNeighbor -AddressFamily IPv4 -ErrorAction SilentlyContinue | " +
+                        "Where-Object { $_.State -in 'Reachable','Stale','Delay','Probe' -and $_.IPAddress.StartsWith($base) -and -not $_.IPAddress.EndsWith('.255') } | " +
+                        "ForEach-Object IPAddress)); " + ListDevices,
+                        "1..254 | Ping (rede local)")
+                },
+                Risk = CommandRisk.Caution, Keywords = "escanear scan dispositivos aparelhos quem está conectado rede local",
+                ConfirmationTitle = "Escanear a Rede",
+                Confirmation =
+                    "Escanear a sua rede local?\n\n" +
+                    "O app vai mandar um ping para cada endereço da sua rede (ex.: 192.168.0.1 a 192.168.0.254) " +
+                    "e listar os aparelhos que responderem, com nome e MAC.\n\n" +
+                    "• Duração: 5 a 10 segundos.\n" +
+                    "• Não altera nada, mas em redes de empresa o setor de TI pode ver o escaneamento: use só na sua rede.\n\n" +
+                    "Deseja escanear agora?"
             },
 
             // ---------- Rede: Wi-Fi ----------
