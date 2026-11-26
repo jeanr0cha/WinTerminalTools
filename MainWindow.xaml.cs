@@ -47,6 +47,7 @@ public partial class MainWindow : Window
 
         ConstruirSecoesDoCatalogo();
         CarregarListaApps(avisarErro: false);
+        MostrarPopulares();
         AtualizarFavoritos();
         AtualizarHistorico();
         AplicarQuebraDeLinhas();
@@ -681,18 +682,166 @@ public partial class MainWindow : Window
             await ExecutarAsync(CommandCatalog.WingetImport(dialogo.FileName));
     }
 
-    private async void BtnBuscarWinget_Click(object sender, RoutedEventArgs e)
+    // ================= WINGET: PROCURAR E INSTALAR (CARTÕES) =================
+    private const int MaxResultadosWinget = 30;
+
+    private async void BtnBuscarWinget_Click(object sender, RoutedEventArgs e) => await BuscarWingetAsync();
+
+    private async void TxtPesquisaWinget_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            await BuscarWingetAsync();
+        }
+    }
+
+    private void TxtPesquisaWinget_TextChanged(object sender, TextChangedEventArgs e) =>
+        PlaceholderPesquisaWinget.Visibility = TxtPesquisaWinget.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private void BtnVerPopulares_Click(object sender, RoutedEventArgs e)
+    {
+        TxtPesquisaWinget.Clear();
+        MostrarPopulares();
+    }
+
+    private async Task BuscarWingetAsync()
     {
         var busca = InputValidator.NormalizeSearchTerm(TxtPesquisaWinget.Text);
         if (busca == null)
         {
             MessageBox.Show(
-                "Digite o nome ou parte do nome do programa que deseja procurar no Winget (sem começar com '-').",
-                "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Digite o nome ou parte do nome do programa que deseja procurar (sem começar com '-').",
+                "Buscar Programa", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        await ExecutarAsync(CommandCatalog.WingetSearch(busca));
+        TxtResultadosTitulo.Text = $"⏳ Procurando \"{busca}\"...";
+        BtnVerPopulares.Visibility = Visibility.Visible;
+        ResultadosWinget.Children.Clear();
+
+        // A tabela crua fica fora do console: os cartões já mostram o resultado de forma legível.
+        var saida = await ExecutarAsync(CommandCatalog.WingetSearch(busca), mostrarSaida: false);
+        if (saida == null)
+            return; // outro comando estava rodando
+
+        var pacotes = WingetSearchParser.Parse(saida);
+        MostrarResultados(busca, pacotes);
+        Escrever(pacotes.Count == 0
+            ? $"\n🔎 Nenhum programa encontrado para \"{busca}\".\n"
+            : $"\n🔎 {pacotes.Count} resultado(s) para \"{busca}\" nos cartões à esquerda. Clique em um para instalar.\n");
+        FlushOutput();
+    }
+
+    private void MostrarPopulares()
+    {
+        TxtResultadosTitulo.Text = "⭐ Populares · clique para instalar";
+        BtnVerPopulares.Visibility = Visibility.Collapsed;
+        ResultadosWinget.Children.Clear();
+
+        foreach (var categoria in PopularApps.All.GroupBy(a => a.Category))
+        {
+            ResultadosWinget.Children.Add(new TextBlock
+            {
+                Text = categoria.Key,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = (Brush)FindResource("TextSecondaryBrush"),
+                Margin = new Thickness(0, 6, 0, 6)
+            });
+
+            var grade = new UniformGrid { Columns = 3 };
+            foreach (var app in categoria)
+                grade.Children.Add(CriarCartaoPacote(app.Name, app.Id, app.Id, podeInstalar: true));
+            ResultadosWinget.Children.Add(grade);
+        }
+    }
+
+    private void MostrarResultados(string busca, IReadOnlyList<WingetPackage> pacotes)
+    {
+        ResultadosWinget.Children.Clear();
+
+        if (pacotes.Count == 0)
+        {
+            TxtResultadosTitulo.Text = $"🔎 Nada encontrado para \"{busca}\"";
+            ResultadosWinget.Children.Add(new TextBlock
+            {
+                Text = "Tente outro nome (em inglês costuma funcionar melhor) ou só uma parte dele.",
+                FontSize = 12,
+                Foreground = (Brush)FindResource("TextSecondaryBrush"),
+                TextWrapping = TextWrapping.Wrap
+            });
+            return;
+        }
+
+        TxtResultadosTitulo.Text = pacotes.Count > MaxResultadosWinget
+            ? $"🔎 {pacotes.Count} resultados para \"{busca}\" · mostrando os {MaxResultadosWinget} primeiros"
+            : $"🔎 {pacotes.Count} resultado(s) para \"{busca}\"";
+
+        var grade = new UniformGrid { Columns = 2 };
+        foreach (var pacote in pacotes.Take(MaxResultadosWinget))
+        {
+            var origem = pacote.Source == "msstore" ? "Microsoft Store" : pacote.Source;
+            var versao = string.IsNullOrEmpty(pacote.Version) || pacote.Version == "Unknown" ? "" : $"v{pacote.Version} · ";
+            grade.Children.Add(CriarCartaoPacote(pacote.Name, pacote.Id, $"{versao}{origem} · {pacote.Id}", pacote.CanInstall));
+        }
+        ResultadosWinget.Children.Add(grade);
+    }
+
+    /// <summary>Cartão clicável de um programa: nome em destaque, detalhe pequeno e "⬇" à direita.</summary>
+    private Button CriarCartaoPacote(string nome, string id, string detalhe, bool podeInstalar)
+    {
+        var textos = new StackPanel();
+        textos.Children.Add(new TextBlock
+        {
+            Text = nome,
+            FontWeight = FontWeights.Bold,
+            Foreground = (Brush)FindResource("AccentBrush"),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        textos.Children.Add(new TextBlock
+        {
+            Text = detalhe,
+            FontSize = 11,
+            Foreground = (Brush)FindResource("TextSecondaryBrush"),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+
+        var conteudo = new Grid();
+        conteudo.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        conteudo.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        conteudo.Children.Add(textos);
+        var seta = new TextBlock { Text = "⬇", FontSize = 15, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+        Grid.SetColumn(seta, 1);
+        conteudo.Children.Add(seta);
+
+        var cartao = new Button
+        {
+            Content = conteudo,
+            Tag = id,
+            Margin = new Thickness(0, 0, 8, 8),
+            Padding = new Thickness(12, 8, 12, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            IsEnabled = podeInstalar,
+            ToolTip = podeInstalar
+                ? $"Instalar {nome}\nID: {id}"
+                : "O winget cortou este ID na listagem. Copie o ID completo do console e use \"Gerenciar um App pelo ID\"."
+        };
+        cartao.Click += async (_, _) => await InstalarPacoteAsync(nome, id);
+        return cartao;
+    }
+
+    private async Task InstalarPacoteAsync(string nome, string id)
+    {
+        var confirmacao = MessageBox.Show(
+            $"Instalar \"{nome}\" pelo winget?\n\n" +
+            $"• ID: {id}\n" +
+            "• O download e a instalação aparecem no console ao lado.\n" +
+            "• Alguns instaladores pedem permissão de administrador no meio do caminho.",
+            "Instalar Programa", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (confirmacao == MessageBoxResult.Yes)
+            await ExecutarAsync(CommandCatalog.WingetInstall(id));
     }
 
     // ================= WINGET: INSTALAÇÃO EM LOTE =================
@@ -984,13 +1133,19 @@ public partial class MainWindow : Window
     private static string CodigoLegivel(int codigo) =>
         codigo < -1000 ? $"0x{unchecked((uint)codigo):X8}" : codigo.ToString(CultureInfo.InvariantCulture);
 
-    private Task ExecutarAsync(CommandSpec comando) => ExecutarSequenciaAsync(new[] { comando }, pararNaFalha: true);
+    private Task<string?> ExecutarAsync(CommandSpec comando, bool mostrarSaida = true) =>
+        ExecutarSequenciaAsync(new[] { comando }, pararNaFalha: true, mostrarSaida: mostrarSaida);
 
     /// <param name="definicao">Comando do catálogo que originou a execução (permite repetir pelo histórico).</param>
-    private async Task ExecutarSequenciaAsync(IReadOnlyList<CommandSpec> comandos, bool pararNaFalha, CommandDefinition? definicao = null)
+    /// <param name="mostrarSaida">False quando a tela mostra o resultado de outro jeito (ex.: cartões da busca); erros aparecem sempre.</param>
+    /// <returns>Saída do último passo, ou null se nada foi executado (já havia outro comando rodando).</returns>
+    private async Task<string?> ExecutarSequenciaAsync(IReadOnlyList<CommandSpec> comandos, bool pararNaFalha,
+        CommandDefinition? definicao = null, bool mostrarSaida = true)
     {
         if (_isRunning)
-            return;
+            return null;
+
+        string ultimaSaida = "";
 
         _currentCts = new CancellationTokenSource();
         var token = _currentCts.Token;
@@ -1026,7 +1181,7 @@ public partial class MainWindow : Window
                     Escrever($"$ {spec.Display}\n");
                 Escrever("\n");
 
-                var saida = new OutputLineFilter(linha => Escrever(linha + "\n"));
+                var saida = new OutputLineFilter(linha => { if (mostrarSaida) Escrever(linha + "\n"); });
                 var erros = new OutputLineFilter(linha => Escrever(linha.Length == 0 ? "\n" : "[ERRO] " + linha + "\n"));
 
                 var (resultado, erro, codigoSaida) = await CommandExecutor.ExecuteAsync(
@@ -1035,6 +1190,7 @@ public partial class MainWindow : Window
                     onErrorLine: erros.Push,
                     cancellationToken: token);
                 ultimoCodigo = codigoSaida;
+                ultimaSaida = resultado;
                 executados++;
 
                 if (token.IsCancellationRequested)
@@ -1080,6 +1236,8 @@ public partial class MainWindow : Window
             TxtConsoleStatus.Text = "Console do Windows (Pronto)";
             ConsoleStatusDot.Fill = new SolidColorBrush(Color.FromRgb(16, 185, 129)); // Verde
         }
+
+        return ultimaSaida;
     }
 
     private void BtnPararComando_Click(object sender, RoutedEventArgs e)
