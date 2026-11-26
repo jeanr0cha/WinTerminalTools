@@ -1,0 +1,56 @@
+name: release
+
+# Publica uma Release no GitHub ao enviar uma tag de versão:
+#   git tag v2.0.0 && git push origin v2.0.0
+# A versão do app vem da tag (sobrescreve <Version> do .csproj).
+# Notas da Release: docs/releases/<tag>.md, se existir; senão, geradas pelos commits.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Versão a partir da tag
+        shell: pwsh
+        run: echo "VERSION=$($env:GITHUB_REF_NAME.TrimStart('v'))" >> $env:GITHUB_ENV
+
+      - run: dotnet test tests/WinTerminalTools.Tests -c Release
+
+      - name: Publicar (pequeno, requer .NET 10 Desktop Runtime)
+        run: dotnet publish WinTerminalTools.csproj -c Release -r win-x64 --self-contained false -p:Version=${{ env.VERSION }} -p:DebugType=None -o out/pequeno
+
+      - name: Publicar (completo, funciona sem instalar nada)
+        run: dotnet publish WinTerminalTools.csproj -c Release -r win-x64 --self-contained true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.VERSION }} -p:DebugType=None -o out/completo
+
+      - name: Compactar
+        shell: pwsh
+        run: |
+          Compress-Archive out/pequeno/* "WinTerminalTools-v$env:VERSION-win-x64.zip"
+          Compress-Archive out/completo/* "WinTerminalTools-v$env:VERSION-win-x64-completo.zip"
+          # Executável solto com nome fixo: o link .../releases/latest/download/WinTerminalTools.exe
+          # (usado no README e no portfólio) sempre baixa a versão mais recente.
+          Copy-Item out/completo/WinTerminalTools.exe WinTerminalTools.exe
+
+      - name: Criar Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = "docs/releases/$env:GITHUB_REF_NAME.md"
+          $zips = @(Get-ChildItem *.zip | ForEach-Object { $_.Name }) + 'WinTerminalTools.exe'
+          if (Test-Path $notes) {
+            gh release create $env:GITHUB_REF_NAME @zips --title "WinTerminalTools $env:GITHUB_REF_NAME" --notes-file $notes
+          } else {
+            gh release create $env:GITHUB_REF_NAME @zips --title "WinTerminalTools $env:GITHUB_REF_NAME" --generate-notes
+          }
