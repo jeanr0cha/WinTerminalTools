@@ -29,11 +29,13 @@ Outros detalhes:
 
 ## Instalação
 
-1. Na aba [Releases](https://github.com/jeanr0cha/WinTerminalTools/releases), baixe um dos ZIPs:
-   - `WinTerminalTools-v2.0.0-win-x64-completo.zip` (~57 MB): funciona em qualquer Windows 10/11 64 bits, **sem instalar nada**.
-   - `WinTerminalTools-v2.0.0-win-x64.zip` (menos de 1 MB): menor, mas exige o [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
-2. Extraia para uma pasta de sua preferência.
-3. Execute o `WinTerminalTools.exe`. Para os comandos de reparo, use o botão **🛡️ Executar como Admin**.
+**Jeito mais simples:** [⬇️ baixar o WinTerminalTools.exe](https://github.com/jeanr0cha/WinTerminalTools/releases/latest/download/WinTerminalTools.exe) (~62 MB, sempre a versão mais recente). É um executável único: funciona em qualquer Windows 10/11 64 bits, **sem instalar nada**. É só abrir.
+
+Na aba [Releases](https://github.com/jeanr0cha/WinTerminalTools/releases) também há os ZIPs:
+- `WinTerminalTools-vX.Y.Z-win-x64-completo.zip` (~57 MB): o mesmo executável completo, compactado.
+- `WinTerminalTools-vX.Y.Z-win-x64.zip` (menos de 1 MB): menor, mas exige o [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+Para os comandos de reparo, use o botão **🛡️ Executar como Admin** dentro do app.
 
 O winget vem no Windows 10/11 atualizado (pacote "Instalador de Aplicativo" da Microsoft Store). Se ele não estiver instalado, o app avisa e mostra onde instalar.
 
@@ -85,7 +87,7 @@ dotnet run --project WinTerminalTools.csproj
 - `Core/InputValidator.cs`: valida host/IP, porta, ID do winget, termo de busca, nome de rede Wi-Fi, minutos e caminho de pasta digitados pelo usuário.
 - `Core/QuickInstallCatalog.cs` e `Core/UserSettings.cs`: lista da instalação rápida e preferências (favoritos e histórico).
 - `tests/`: testes xUnit. Só executam comandos inofensivos (echo, ping 127.0.0.1, leitura); os que alteram o sistema são testados apenas na montagem dos argumentos.
-- **Release:** `git tag vX.Y.Z && git push origin vX.Y.Z` dispara `.github/workflows/release.yml`, que roda os testes e publica os dois ZIPs. As notas ficam em `docs/releases/`.
+- **Release:** `git tag vX.Y.Z && git push origin vX.Y.Z` dispara `.github/workflows/release.yml`, que roda os testes e publica os dois ZIPs e o `WinTerminalTools.exe` solto. As notas ficam em `docs/releases/`.
 
 ## Contribuindo
 
