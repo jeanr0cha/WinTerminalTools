@@ -46,6 +46,9 @@ public partial class MainWindow : Window
 
         _isAdmin = EhAdministrador();
 
+        Title = $"WinTerminalTools v{AppInfo.Version}";
+        TxtVersao.Text = $"v{AppInfo.Version}";
+
         ConstruirSecoesDoCatalogo();
         CarregarIconeSeguro();
         VerificarPermissaoAdministrador();
@@ -122,18 +125,18 @@ public partial class MainWindow : Window
 
     private void ExibirMensagemBoasVindas()
     {
+        // Sem moldura desenhada: o console quebra linhas conforme a largura e a moldura se desalinhava.
         var sb = new StringBuilder();
-        sb.AppendLine("╔══════════════════════════════════════════════════════════════════╗");
-        sb.AppendLine("║                WinTerminalTools v1.0 (.NET 10)                   ║");
-        sb.AppendLine("║       Central de Linha de Comando, Rede e Winget                 ║");
-        sb.AppendLine("╚══════════════════════════════════════════════════════════════════╝");
+        sb.AppendLine($"⚡ WinTerminalTools v{AppInfo.Version}");
+        sb.AppendLine("Central de Linha de Comando, Rede e Winget");
+        sb.AppendLine("────────────────────────────────────");
         sb.AppendLine();
         sb.AppendLine("• Escolha um comando nas categorias ao lado para executar em tempo real.");
         sb.AppendLine("• Use a aba 'Instalação Rápida & Winget' para verificar updates ou instalar apps.");
         sb.AppendLine("• Comandos com impacto no sistema exigem confirmação com aviso de risco.");
         sb.AppendLine("• Todo comando pode ser interrompido a qualquer instante clicando em [Cancelar Execução].");
         sb.AppendLine();
-        sb.AppendLine("----------------------------------------------------------------------");
+        sb.AppendLine("────────────────────────────────────");
         TxtConsoleOutput.Text = sb.ToString();
     }
 

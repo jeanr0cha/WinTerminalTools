@@ -11,6 +11,12 @@ public sealed record CommandSpec(string FileName, IReadOnlyList<string> Argument
     /// </summary>
     public string? WorkingDirectory { get; init; }
 
+    /// <summary>
+    /// O programa escreve em UTF-8 mesmo com a saída redirecionada (ex.: winget). Os comandos clássicos
+    /// do Windows usam a página de código OEM (850 no Brasil), que é o padrão.
+    /// </summary>
+    public bool Utf8Output { get; init; }
+
     public static CommandSpec Create(string fileName, params string[] arguments) => new(fileName, arguments);
 
     /// <summary>Texto exibido no console (apenas informativo).</summary>
