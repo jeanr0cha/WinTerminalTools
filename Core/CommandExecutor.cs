@@ -117,6 +117,10 @@ public static class CommandExecutor
             await process.WaitForExitAsync(cancellationToken);
             // Um programa filho que herdou a saída pode segurá-la aberta; não espera para sempre.
             await Task.WhenAny(leituras, Task.Delay(DrainTimeout));
+
+            // O Kill do cancelamento pode fazer o processo terminar antes de o WaitForExitAsync perceber o
+            // cancelamento; sem isto o resultado viria como uma saída normal com código -1.
+            cancellationToken.ThrowIfCancellationRequested();
         }
         catch (OperationCanceledException)
         {
