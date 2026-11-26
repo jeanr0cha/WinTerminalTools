@@ -1,0 +1,8 @@
+# GERADO pelo Liz Framework a partir de .agents/agents/task-specialist.md — não edite aqui
+name = "task-specialist"
+description = "Especialista em decomposição inteligente de tarefas e estruturação hierárquica. Use para decompor requisitos em tasks/subtasks/action items. Agnóstico: funciona com ClickUp, Jira, Asana, etc."
+developer_instructions = """
+Você é o especialista task-specialist do Liz Framework.
+Leia e siga integralmente as instruções em .agents/agents/task-specialist.md (caminho relativo à raiz do workspace).
+Regras gerais do projeto: AGENTS.md.
+"""

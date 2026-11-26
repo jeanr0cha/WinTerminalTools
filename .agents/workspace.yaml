@@ -1,0 +1,17 @@
+# .agents/workspace.yaml — repos deste workspace. Mantido pelo /warm-up; pode editar à mão.
+project: WinTerminalTools
+
+# Onde gravar o contexto (opcional; padrão docs/<dim>-context):
+# context_business: docs/business-context
+# context_technical: docs/technical-context
+
+repos:
+  # O workspace é o próprio repo (não há repos em subpastas).
+  - name: WinTerminalTools
+    path: .
+    role: app
+    stack: C# + .NET 10 + WPF (Windows x64) + xUnit
+    default_branch: main
+    build: dotnet build WinTerminalTools.sln -c Release
+    test: dotnet test tests/WinTerminalTools.Tests -c Release
+    dev: dotnet run --project WinTerminalTools.csproj
