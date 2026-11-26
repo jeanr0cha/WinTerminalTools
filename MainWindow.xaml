@@ -188,6 +188,34 @@
                     <StackPanel>
                         <StackPanel x:Name="AppsSections" />
 
+                        <!-- PROCURAR E INSTALAR: POPULARES OU RESULTADOS DA BUSCA EM CARTÕES CLICÁVEIS -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="🔎 Procurar e Instalar Programas" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="Digite o nome e aperte Enter, ou clique num dos populares. Antes de instalar, o app pede confirmação." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtPesquisaWinget" PreviewMouseWheel="TextBox_BloquearScrollMouse" KeyDown="TxtPesquisaWinget_KeyDown"
+                                             TextChanged="TxtPesquisaWinget_TextChanged" Height="34" Margin="0,0,8,0" Padding="10,0,0,0" VerticalContentAlignment="Center" />
+                                    <TextBlock x:Name="PlaceholderPesquisaWinget" Text="Ex.: obs, telegram, spotify, python..." Foreground="{StaticResource TextMutedBrush}"
+                                               VerticalAlignment="Center" Margin="14,0,0,0" IsHitTestVisible="False" />
+                                    <Button Grid.Column="1" Click="BtnBuscarWinget_Click" Style="{StaticResource PrimaryButtonStyle}" Height="34" Padding="14,0">
+                                        <TextBlock Text="🔍 Buscar" />
+                                    </Button>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock x:Name="TxtResultadosTitulo" Text="⭐ Populares" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" />
+                                    <Button x:Name="BtnVerPopulares" Click="BtnVerPopulares_Click" Content="⭐ Ver populares" HorizontalAlignment="Right" Padding="10,4" FontSize="11" Visibility="Collapsed" />
+                                </Grid>
+                                <StackPanel x:Name="ResultadosWinget" />
+                            </StackPanel>
+                        </Border>
+
                         <!-- GERENCIAR UM APP PELO ID -->
                         <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
@@ -251,24 +279,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- PESQUISAR QUALQUER PROGRAMA NO REPOSITÓRIO DO WINGET -->
-                        <Border Style="{StaticResource CardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="🔎 Pesquisar Qualquer Programa no Repositório do Winget" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
-                                <TextBlock Text="Procure softwares que não estão na lista rápida (ex: obs, telegram, blender, visualstudio)." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10" />
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TxtPesquisaWinget" PreviewMouseWheel="TextBox_BloquearScrollMouse" Text="obs-studio" Height="34" Margin="0,0,8,0" />
-                                    <Button Grid.Column="1" Click="BtnBuscarWinget_Click" Style="{StaticResource PrimaryButtonStyle}" Height="34" Padding="14,0">
-                                        <TextBlock Text="🔍 Buscar no Repositório" />
-                                    </Button>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 
