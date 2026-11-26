@@ -49,6 +49,7 @@ public partial class MainWindow : Window
         CarregarListaApps(avisarErro: false);
         AtualizarFavoritos();
         AtualizarHistorico();
+        AplicarQuebraDeLinhas();
         CarregarIconeSeguro();
         VerificarPermissaoAdministrador();
         ExibirMensagemBoasVindas();
@@ -959,6 +960,30 @@ public partial class MainWindow : Window
     }
 
     // ================= MOTOR PRINCIPAL DE EXECUÇÃO ASSÍNCRONA =================
+    private const string FaixaConsole = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    private static string ResumoDaExecucao(TimeSpan duracao, bool cancelado, string? erroInesperado,
+        int falhas, int executados, int ultimoCodigo, bool sequencia)
+    {
+        var tempo = duracao.TotalSeconds < 60
+            ? $"{duracao.TotalSeconds.ToString("0.0", CultureInfo.CurrentCulture)} s"
+            : $"{(int)duracao.TotalMinutes} min {duracao.Seconds} s";
+
+        if (erroInesperado != null)
+            return $"❌ Falha na execução: {erroInesperado}";
+        if (cancelado)
+            return $"⏹ Interrompido pelo usuário · {tempo}";
+        if (falhas == 0)
+            return $"✔ Concluído com sucesso · {tempo}";
+        return sequencia
+            ? $"⚠ {falhas} de {executados} passo(s) com erro · {tempo}"
+            : $"⚠ Terminou com erro (código {CodigoLegivel(ultimoCodigo)}) · {tempo}";
+    }
+
+    /// <summary>Códigos HRESULT (ex.: -1978335212) ficam mais reconhecíveis em hexadecimal (0x8A150014).</summary>
+    private static string CodigoLegivel(int codigo) =>
+        codigo < -1000 ? $"0x{unchecked((uint)codigo):X8}" : codigo.ToString(CultureInfo.InvariantCulture);
+
     private Task ExecutarAsync(CommandSpec comando) => ExecutarSequenciaAsync(new[] { comando }, pararNaFalha: true);
 
     /// <param name="definicao">Comando do catálogo que originou a execução (permite repetir pelo histórico).</param>
@@ -970,61 +995,75 @@ public partial class MainWindow : Window
         _currentCts = new CancellationTokenSource();
         var token = _currentCts.Token;
         int ultimoCodigo = 0;
+        int falhas = 0;
+        int executados = 0;
+        string? erroInesperado = null;
+        var cronometro = Stopwatch.StartNew();
 
         SetOcupado(true);
         ConsoleStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0, 163, 255)); // Ciano
         TxtConsoleStatus.Text = "Executando comando no terminal...";
         _flushTimer.Start();
 
+        // Cada execução vira um bloco: faixa com título e hora, saída, e uma linha de resultado.
+        var sequencia = comandos.Count > 1;
+        var titulo = definicao?.Title ?? (sequencia ? $"{comandos.Count} comandos em sequência" : comandos[0].Display);
+        Escrever($"\n\n{FaixaConsole}\n▶ {titulo}   ·   {DateTime.Now:HH:mm:ss}\n{FaixaConsole}\n");
+
         try
         {
             for (int i = 0; i < comandos.Count; i++)
             {
                 var spec = comandos[i];
-                TxtComandoAtual.Text = comandos.Count > 1
+                TxtComandoAtual.Text = sequencia
                     ? $"Executando ({i + 1}/{comandos.Count}): {spec.Display}"
                     : $"Executando: {spec.Display}";
 
-                Escrever($"\n\n$ {spec.Display}\n");
-                Escrever("────────────────────────────────────\n");
+                if (sequencia)
+                    Escrever($"\n── Passo {i + 1} de {comandos.Count} ──\n");
+                // Sem título próprio, a faixa já mostra o comando; não repete.
+                if (sequencia || definicao != null)
+                    Escrever($"$ {spec.Display}\n");
+                Escrever("\n");
+
+                var saida = new OutputLineFilter(linha => Escrever(linha + "\n"));
+                var erros = new OutputLineFilter(linha => Escrever(linha.Length == 0 ? "\n" : "[ERRO] " + linha + "\n"));
 
                 var (resultado, erro, codigoSaida) = await CommandExecutor.ExecuteAsync(
                     spec,
-                    onOutputLine: linha => Escrever(linha + "\n"),
-                    onErrorLine: linha => Escrever("[ERRO] " + linha + "\n"),
+                    onOutputLine: saida.Push,
+                    onErrorLine: erros.Push,
                     cancellationToken: token);
                 ultimoCodigo = codigoSaida;
+                executados++;
 
                 if (token.IsCancellationRequested)
-                {
-                    Escrever("\n⏹ Comando interrompido pelo usuário.\n");
                     break;
-                }
 
                 if (codigoSaida != 0)
                 {
-                    Escrever($"\n⚠️ [Código de saída: {codigoSaida}]\n");
+                    falhas++;
+                    if (sequencia)
+                        Escrever($"\n⚠ Passo {i + 1} terminou com código {CodigoLegivel(codigoSaida)}.\n");
                     if (!_isAdmin && OutputAnalyzer.IndicatesElevationNeeded(resultado, erro))
-                    {
-                        Escrever("💡 DICA: Execute o WinTerminalTools como Administrador para que este comando tenha permissão total.\n");
-                    }
+                        Escrever("\n💡 Dica: execute o WinTerminalTools como Administrador para este comando ter permissão total.\n");
+                    if (spec.FileName == "winget" && OutputAnalyzer.WingetExitHint(codigoSaida) is { } dicaWinget)
+                        Escrever($"\n💡 {dicaWinget}\n");
 
                     if (pararNaFalha)
                         break;
-                }
-                else
-                {
-                    Escrever("✔ Comando finalizado com sucesso.\n");
                 }
             }
         }
         catch (Exception ex)
         {
-            Escrever($"\n❌ Falha na execução: {ex.Message}\n");
+            erroInesperado = ex.Message;
             ultimoCodigo = -1;
         }
         finally
         {
+            Escrever($"\n{ResumoDaExecucao(cronometro.Elapsed, token.IsCancellationRequested, erroInesperado, falhas, executados, ultimoCodigo, sequencia)}\n");
+
             _flushTimer.Stop();
             FlushOutput();
 
@@ -1078,6 +1117,19 @@ public partial class MainWindow : Window
                 MessageBox.Show("A Área de Transferência está em uso por outro programa. Tente novamente.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+    }
+
+    private void BtnQuebraLinhas_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ConsoleWrap = !_settings.ConsoleWrap;
+        AplicarQuebraDeLinhas();
+        SalvarPreferencias();
+    }
+
+    private void AplicarQuebraDeLinhas()
+    {
+        TxtConsoleOutput.TextWrapping = _settings.ConsoleWrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        TxtQuebraLinhas.Text = _settings.ConsoleWrap ? "↩ Quebrar: sim" : "↔ Quebrar: não";
     }
 
     private void BtnSalvarConsole_Click(object sender, RoutedEventArgs e) => SalvarConsole();
