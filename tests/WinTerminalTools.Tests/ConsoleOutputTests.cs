@@ -74,6 +74,36 @@ public class ConsoleOutputTests
         Assert.True(lida.Single().Apps[1].Checked);
     }
 
+    [Theory]
+    [InlineData("O Serviço de Configuração Automática sem Fio não está em execução.")]
+    [InlineData("Endereço IPv4. . . . . . . . : 192.168.0.10")]
+    [InlineData("ação ✔ ▸ █")]
+    public void Decodificacao_AceitaUtf8EPagina850NaMesmaSaida(string texto)
+    {
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        var cp850 = System.Text.Encoding.GetEncoding(850);
+
+        // netsh/winget escrevem UTF-8...
+        Assert.Equal(texto, CommandExecutor.DecodeLine(System.Text.Encoding.UTF8.GetBytes(texto), cp850));
+
+        // ...e ipconfig/systeminfo escrevem na página 850 (quando o texto cabe nela).
+        var bytes850 = cp850.GetBytes(texto);
+        if (cp850.GetString(bytes850) == texto)
+            Assert.Equal(texto, CommandExecutor.DecodeLine(bytes850, cp850));
+    }
+
+    [Fact]
+    public async Task Saida_ComQuebrasCrLfECrSozinho_ViraLinhasSeparadas()
+    {
+        // PowerShell escrevendo bytes crus: "a\r\nb\rc\n" deve virar a, b, c.
+        var spec = CommandSpec.Create("powershell", "-NoProfile", "-Command",
+            "$o=[Console]::OpenStandardOutput(); $b=[byte[]](97,13,10,98,13,99,10); $o.Write($b,0,$b.Length)");
+        var linhas = new List<string>();
+        var (_, _, code) = await CommandExecutor.ExecuteAsync(spec, onOutputLine: linhas.Add);
+        Assert.Equal(0, code);
+        Assert.Equal(new[] { "a", "b", "c" }, linhas);
+    }
+
     [Fact]
     public async Task ScriptPowerShell_SaiEmUtf8ComSimbolos()
     {
