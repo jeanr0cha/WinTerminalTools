@@ -14,7 +14,7 @@ dotnet publish WinTerminalTools.csproj -c Release -r win-x64 --self-contained fa
 
 - `Core/CommandExecutor.cs`: executa processos **sem shell** (`ArgumentList`), com cancelamento da árvore de processos.
 - `Core/InputValidator.cs`: valida host/IP, ID do winget, termo de busca e caminho de pasta digitados pelo usuário.
-- `Core/CommandCatalog.cs`: monta cada comando (executável + argumentos).
+- `Core/CommandCatalog.cs`: monta cada comando (executável + argumentos) e guarda o catálogo da interface (`Sections` + `Definitions`): adicionar um comando novo é acrescentar uma entrada ali.
 - `tests/`: testes xUnit (validação, montagem de comandos e executor com comandos inofensivos).
 - O binário compilado deve ser distribuído pelas *Releases* do GitHub (o workflow em `.github/workflows` publica o artefato).
 

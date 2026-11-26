@@ -17,6 +17,18 @@
         <SolidColorBrush x:Key="DangerBrush" Color="#EF4444" />
         <SolidColorBrush x:Key="DangerHoverBrush" Color="#DC2626" />
         <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B" />
+        <SolidColorBrush x:Key="DangerTextBrush" Color="#F87171" />
+        <SolidColorBrush x:Key="InsetBgBrush" Color="#16161B" />
+
+        <!-- Card padrão das abas -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceDarkBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderDarkBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
 
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F8FAFC" />
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8" />

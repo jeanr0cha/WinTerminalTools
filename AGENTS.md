@@ -33,6 +33,14 @@ CI: `.github/workflows/build.yml` (build + testes + publish a cada push na `main
 
 - **Estrutura:** `Core/` tem a lógica sem UI (montagem de comandos, execução, validação) e é coberta
   por testes; `MainWindow.xaml(.cs)` é a interface; estilos e cores ficam em `App.xaml`.
+- **Adicionar um comando sem entrada do usuário:** uma entrada em `CommandCatalog.Definitions`
+  (`Core/CommandCatalog.cs`) com seção, título, descrição, passos, risco, `RequiresAdmin` e, se o risco
+  não for `Safe`, o texto de `Confirmation`. A tela monta o botão sozinha (cor pelo risco, aviso de admin,
+  confirmação, busca). Seção nova = uma linha em `CommandCatalog.Sections`. Os testes de
+  `CatalogTests` garantem que todo comando com risco tem confirmação.
+- **Comando que depende de algo digitado** (host, ID do winget, pasta): card próprio no XAML + handler
+  no `MainWindow.xaml.cs`, validando a entrada no `InputValidator` e montando o `CommandSpec` no
+  `CommandCatalog`. Caminho digitado nunca vai como argumento do `cmd.exe`: use `WorkingDirectory`.
 - **Execução de comandos:** sempre por `CommandSpec` (executável + lista de argumentos) e
   `CommandExecutor`, **nunca** concatenando texto num `cmd /c`. Tudo que o usuário digita passa pelo
   `InputValidator` antes de virar argumento.
