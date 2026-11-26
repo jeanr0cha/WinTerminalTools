@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text;
 
 namespace WinTerminalTools.Core;
@@ -31,7 +33,7 @@ public static class CommandExecutor
         Action<string>? onErrorLine = null,
         CancellationToken cancellationToken = default)
     {
-        var encoding = OemEncoding.Value;
+        var encoding = spec.Utf8Output ? new UTF8Encoding(false) : OemEncoding.Value;
 
         var processStartInfo = new ProcessStartInfo
         {
@@ -103,10 +105,34 @@ public static class CommandExecutor
         }
         catch (Exception ex)
         {
-            errorBuilder.AppendLine($"\nErro ao iniciar processo: {ex.Message}");
+            // Sem isto a tela mostraria só "código -1", sem dizer o motivo.
+            var message = ex is Win32Exception { NativeErrorCode: ErrorFileNotFound }
+                ? $"Erro ao iniciar processo: o programa '{spec.FileName}' não foi encontrado neste computador."
+                : $"Erro ao iniciar processo: {ex.Message}";
+            errorBuilder.AppendLine(message);
+            onErrorLine?.Invoke(message);
+
+            var hint = MissingProgramHint(spec.FileName);
+            if (hint != null && ex is Win32Exception)
+            {
+                errorBuilder.AppendLine(hint);
+                onErrorLine?.Invoke(hint);
+            }
+
             return (outputBuilder.ToString().TrimEnd(), errorBuilder.ToString().TrimEnd(), -1);
         }
 
         return (outputBuilder.ToString().TrimEnd(), errorBuilder.ToString().TrimEnd(), process.ExitCode);
     }
+
+    private const int ErrorFileNotFound = 2;
+
+    /// <summary>Como instalar programas que não vêm em todo Windows.</summary>
+    public static string? MissingProgramHint(string fileName) =>
+        Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant() switch
+        {
+            "winget" => "Dica: o winget vem no 'Instalador de Aplicativo' (App Installer). Instale ou atualize pela " +
+                        "Microsoft Store: https://apps.microsoft.com/detail/9NBLGGH4NNS1",
+            _ => null
+        };
 }

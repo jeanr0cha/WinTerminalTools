@@ -6,6 +6,32 @@ namespace WinTerminalTools.Tests;
 public class CommandTests
 {
     [Fact]
+    public void Winget_SempreLidoComoUtf8()
+    {
+        Assert.All(new[]
+        {
+            CommandCatalog.WingetListUpgrades, CommandCatalog.WingetUpgradeAll, CommandCatalog.WingetSearch("x"),
+            CommandCatalog.WingetUpgrade("Git.Git"), CommandCatalog.WingetInstall("Git.Git")
+        }, s => Assert.True(s.Utf8Output));
+        Assert.False(CommandCatalog.Sfc.Utf8Output);
+    }
+
+    [Theory]
+    [InlineData("winget", true)]
+    [InlineData("winget.exe", true)]
+    [InlineData("ipconfig", false)]
+    public void DicaDeProgramaAusente_SoParaQuemPrecisaInstalar(string programa, bool temDica)
+        => Assert.Equal(temDica, CommandExecutor.MissingProgramHint(programa) != null);
+
+    [Fact]
+    public void Versao_VemDoAssemblySemOHashDoCommit()
+    {
+        var versao = AppInfo.ResolveVersion(typeof(AppInfo).Assembly);
+        Assert.Matches(@"^\d+\.\d+\.\d+", versao);
+        Assert.DoesNotContain("+", versao);
+    }
+
+    [Fact]
     public void Dir_PastaVaiComoDiretorioDeTrabalhoENuncaNaLinhaDeComando()
     {
         var spec = CommandCatalog.Dir(@"C:\a&calc");
@@ -85,6 +111,26 @@ public class CommandExecutorTests
         var (_, error, code) = await CommandExecutor.ExecuteAsync(CommandSpec.Create("wtt-nao-existe-xyz"));
         Assert.Equal(-1, code);
         Assert.Contains("Erro ao iniciar", error);
+    }
+
+    [Fact]
+    public async Task ExecutavelInexistente_AvisaATelaPeloCallbackDeErro()
+    {
+        var linhas = new List<string>();
+        await CommandExecutor.ExecuteAsync(CommandSpec.Create("wtt-nao-existe-xyz"), onErrorLine: linhas.Add);
+        Assert.Contains(linhas, l => l.Contains("não foi encontrado"));
+    }
+
+    [Fact]
+    public async Task SaidaUtf8_EhDecodificadaComoUtf8()
+    {
+        // PowerShell escrevendo bytes UTF-8 crus de "ação" no stdout; só lê/escreve na própria saída.
+        var spec = CommandSpec.Create("powershell", "-NoProfile", "-Command",
+            "$o=[Console]::OpenStandardOutput(); $b=[Text.Encoding]::UTF8.GetBytes('ação'); $o.Write($b,0,$b.Length)")
+            with { Utf8Output = true };
+        var (output, _, code) = await CommandExecutor.ExecuteAsync(spec);
+        Assert.Equal(0, code);
+        Assert.Equal("ação", output);
     }
 
     [Fact]

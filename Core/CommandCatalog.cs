@@ -17,18 +17,22 @@ public static class CommandCatalog
     public static CommandSpec IpRelease => CommandSpec.Create("ipconfig", "/release");
     public static CommandSpec IpRenew => CommandSpec.Create("ipconfig", "/renew");
 
-    public static CommandSpec WingetListUpgrades => CommandSpec.Create("winget", "upgrade");
+    /// <summary>O winget escreve em UTF-8 mesmo redirecionado.</summary>
+    private static CommandSpec Winget(params string[] arguments) =>
+        CommandSpec.Create("winget", arguments) with { Utf8Output = true };
+
+    public static CommandSpec WingetListUpgrades => Winget("upgrade");
 
     public static CommandSpec WingetUpgradeAll =>
-        CommandSpec.Create("winget", "upgrade", "--all", "--include-unknown", WingetAgreements1, WingetAgreements2);
+        Winget("upgrade", "--all", "--include-unknown", WingetAgreements1, WingetAgreements2);
 
     public static CommandSpec WingetUpgrade(string id) =>
-        CommandSpec.Create("winget", "upgrade", "--id", id, "-e", WingetAgreements1, WingetAgreements2);
+        Winget("upgrade", "--id", id, "-e", WingetAgreements1, WingetAgreements2);
 
-    public static CommandSpec WingetSearch(string term) => CommandSpec.Create("winget", "search", term);
+    public static CommandSpec WingetSearch(string term) => Winget("search", term);
 
     public static CommandSpec WingetInstall(string id) =>
-        CommandSpec.Create("winget", "install", "--id", id, "-e", "--silent", WingetAgreements1, WingetAgreements2);
+        Winget("install", "--id", id, "-e", "--silent", WingetAgreements1, WingetAgreements2);
 
     public static CommandSpec DiskSpace() =>
         CommandSpec.Create("powershell", "-NoProfile", "-Command",

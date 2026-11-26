@@ -29,6 +29,11 @@ dotnet publish WinTerminalTools.csproj -c Release -r win-x64 --self-contained fa
 
 CI: `.github/workflows/build.yml` (build + testes + publish a cada push na `main` e em PRs).
 
+**Release:** `git tag vX.Y.Z && git push origin vX.Y.Z` dispara `.github/workflows/release.yml`, que
+roda os testes e publica dois ZIPs (pequeno, que exige o .NET 10 Desktop Runtime, e completo, que
+funciona sem instalar nada). A versão do app vem da tag; mantenha `<Version>` do `.csproj` igual.
+Notas da Release: `docs/releases/vX.Y.Z.md`. A versão exibida na tela vem de `AppInfo.Version`.
+
 ## Convenções do projeto
 
 - **Estrutura:** `Core/` tem a lógica sem UI (montagem de comandos, execução, validação) e é coberta
