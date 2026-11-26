@@ -46,6 +46,10 @@ Notas da Release: `docs/releases/vX.Y.Z.md`. A versão exibida na tela vem de `A
 - **Comando que depende de algo digitado** (host, ID do winget, pasta): card próprio no XAML + handler
   no `MainWindow.xaml.cs`, validando a entrada no `InputValidator` e montando o `CommandSpec` no
   `CommandCatalog`. Caminho digitado nunca vai como argumento do `cmd.exe`: use `WorkingDirectory`.
+  Script PowerShell (`CommandCatalog.PowerShell`) só recebe entrada já validada (ex.: host do
+  `NormalizeHost`, número inteiro).
+- **Lista de apps da instalação rápida:** `Core/QuickInstallCatalog.cs` (padrão) ou
+  `%APPDATA%\WinTerminalTools\apps.json` (personalizada pelo usuário, validada ao carregar).
 - **Execução de comandos:** sempre por `CommandSpec` (executável + lista de argumentos) e
   `CommandExecutor`, **nunca** concatenando texto num `cmd /c`. Tudo que o usuário digita passa pelo
   `InputValidator` antes de virar argumento.

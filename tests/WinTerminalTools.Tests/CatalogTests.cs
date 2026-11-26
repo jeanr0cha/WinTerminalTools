@@ -71,7 +71,12 @@ public class CatalogTests
     [InlineData("ip-release")]
     [InlineData("ip-reset")]
     [InlineData("winget-upgrade-all")]
-    [InlineData("shutdown-1h")]
+    [InlineData("winsock-reset")]
+    [InlineData("tcpip-reset")]
+    [InlineData("network-full-repair")]
+    [InlineData("temp-clean")]
+    [InlineData("recycle-bin")]
+    [InlineData("hibernate")]
     public void ComandosQueAlteramOSistema_SaoPerigosos(string id)
         => Assert.Equal(CommandRisk.Dangerous, CommandCatalog.Get(id).Risk);
 
@@ -80,7 +85,35 @@ public class CatalogTests
     [InlineData("dism")]
     [InlineData("chkdsk")]
     [InlineData("ip-release")]
+    [InlineData("winsock-reset")]
+    [InlineData("tcpip-reset")]
+    [InlineData("restore-point-create")]
     public void ComandosDeSistema_ExigemAdmin(string id) => Assert.True(CommandCatalog.Get(id).RequiresAdmin);
+
+    [Fact]
+    public void ReparoCompletoDaRede_SegueMesmoSeUmPassoFalhar()
+    {
+        var reparo = CommandCatalog.Get("network-full-repair");
+        Assert.Equal(3, reparo.Steps.Count);
+        Assert.True(reparo.ContinueOnFailure);
+    }
+
+    [Fact]
+    public void RelatorioDeBateria_SalvaEmDocumentos()
+    {
+        var passo = CommandCatalog.Get("battery-report").Steps.Single();
+        Assert.Equal(CommandCatalog.BatteryReportPath, passo.Arguments[^1]);
+        Assert.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), CommandCatalog.BatteryReportPath);
+    }
+
+    [Fact]
+    public async Task TempoLigado_ScriptPowerShellRodaEMostraAData()
+    {
+        // Comando só de leitura: consulta a hora do último boot.
+        var (output, error, code) = await CommandExecutor.ExecuteAsync(CommandCatalog.Get("uptime").Steps.Single());
+        Assert.True(code == 0, error);
+        Assert.StartsWith("Ligado desde", output);
+    }
 
     [Fact]
     public void ResetDeConexao_FazReleaseERenewMesmoSeOReleaseFalhar()

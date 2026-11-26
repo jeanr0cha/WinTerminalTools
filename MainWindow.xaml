@@ -131,6 +131,25 @@
                                     </Button>
                                 </Grid>
 
+                                <!-- DNS e porta usam o mesmo host -->
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Click="BtnNslookup_Click" Height="34" Margin="0,0,8,0">
+                                        <TextBlock Text="🔎 Consultar DNS (nslookup)" />
+                                    </Button>
+                                    <TextBlock Grid.Column="2" Text="Porta:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <TextBox Grid.Column="3" x:Name="TxtPortaRede" Text="443" PreviewMouseWheel="TextBox_BloquearScrollMouse" Height="34" Margin="0,0,8,0" />
+                                    <Button Grid.Column="4" Click="BtnTestarPorta_Click" Height="34">
+                                        <TextBlock Text="🚪 Testar Porta" />
+                                    </Button>
+                                </Grid>
+
                                 <!-- Atalhos rápidos em chips -->
                                 <WrapPanel>
                                     <TextBlock Text="Sugestões rápidas:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -141,6 +160,24 @@
                                 </WrapPanel>
                             </StackPanel>
                         </Border>
+
+                        <!-- SENHA DE WI-FI SALVO -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="🔑 Senha de uma Rede Wi-Fi Salva" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="Digite o nome exato da rede (veja em &quot;Redes Wi-Fi Salvas&quot;). A senha aparece no console." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtPerfilWifi" PreviewMouseWheel="TextBox_BloquearScrollMouse" Height="34" Margin="0,0,8,0" />
+                                    <Button Grid.Column="1" Click="BtnSenhaWifi_Click" Height="34" Padding="14,0">
+                                        <TextBlock Text="🔑 Mostrar Senha" Foreground="{StaticResource WarningBrush}" />
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -149,20 +186,46 @@
                     <StackPanel>
                         <StackPanel x:Name="AppsSections" />
 
-                        <!-- ATUALIZAR APP ESPECÍFICO -->
+                        <!-- GERENCIAR UM APP PELO ID -->
                         <Border Style="{StaticResource CardStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="⬆ Atualizar apenas um aplicativo (ID do winget):" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextSecondaryBrush}" />
-                                <TextBox x:Name="TxtAppIdUpgrade" PreviewMouseWheel="TextBox_BloquearScrollMouse" Grid.Column="1" Text="Git.Git" Height="32" Margin="0,0,8,0" />
-                                <Button Grid.Column="2" Click="BtnUpgradeEspecifico_Click" Style="{StaticResource PrimaryButtonStyle}" Height="32" Padding="12,0">
-                                    <TextBlock Text="⬆ Atualizar Este App" />
-                                </Button>
-                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="🎯 Gerenciar um App pelo ID" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="O ID aparece em &quot;Programas Instalados&quot; ou na busca abaixo (ex: Git.Git, Google.Chrome)." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <TextBox x:Name="TxtAppIdUpgrade" PreviewMouseWheel="TextBox_BloquearScrollMouse" Text="Git.Git" Height="34" Margin="0,0,0,8" />
+                                <WrapPanel>
+                                    <Button Click="BtnInstalarEspecifico_Click" Style="{StaticResource PrimaryButtonStyle}" Height="34" Padding="14,0" Margin="0,0,8,0">
+                                        <TextBlock Text="⬇ Instalar" />
+                                    </Button>
+                                    <Button Click="BtnUpgradeEspecifico_Click" Height="34" Padding="14,0" Margin="0,0,8,0">
+                                        <TextBlock Text="⬆ Atualizar" />
+                                    </Button>
+                                    <Button Click="BtnDesinstalarEspecifico_Click" Height="34" Padding="14,0">
+                                        <TextBlock Text="🗑️ Desinstalar" Foreground="{StaticResource DangerTextBrush}" />
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- BACKUP DA LISTA DE PROGRAMAS -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="💾 Backup da Lista de Programas" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="Exporte os programas instalados para um arquivo e reinstale todos de uma vez depois de formatar." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <UniformGrid Columns="2">
+                                    <Button Click="BtnExportarApps_Click" Margin="0,0,8,0" HorizontalContentAlignment="Left" Padding="12,8">
+                                        <StackPanel>
+                                            <TextBlock Text="📤 Exportar Lista..." FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                            <TextBlock Text="Salva um JSON (winget export)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="BtnImportarApps_Click" HorizontalContentAlignment="Left" Padding="12,8">
+                                        <StackPanel>
+                                            <TextBlock Text="📥 Importar e Instalar..." FontWeight="Bold" Foreground="{StaticResource DangerTextBrush}" />
+                                            <TextBlock Text="Instala tudo de um JSON (winget import)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Button>
+                                </UniformGrid>
+                            </StackPanel>
                         </Border>
 
                         <!-- INSTALAÇÃO EM LOTE PÓS-FORMATAÇÃO -->
@@ -177,53 +240,12 @@
                                     </Button>
                                     <Button Click="BtnMarcarTodos_Click" Content="Selecionar Todos" Margin="0,0,6,0" Padding="10,6" FontSize="11" />
                                     <Button Click="BtnDesmarcarTodos_Click" Content="Desmarcar Todos" Padding="10,6" FontSize="11" />
+                                    <Button Click="BtnEditarListaApps_Click" Content="✏️ Editar Lista" Margin="6,0,6,0" Padding="10,6" FontSize="11" ToolTip="Abre o arquivo apps.json no Bloco de Notas" />
+                                    <Button Click="BtnRecarregarListaApps_Click" Content="🔄 Recarregar" Padding="10,6" FontSize="11" />
                                 </WrapPanel>
 
-                                <!-- Colunas de Checkboxes -->
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="10" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="10" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- NAVEGADORES -->
-                                    <Border Grid.Column="0" Background="{StaticResource InsetBgBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
-                                        <StackPanel>
-                                            <TextBlock Text="🌐 Navegadores" FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
-                                            <CheckBox x:Name="AppChrome" Tag="Google.Chrome" Content="Google Chrome" IsChecked="True" />
-                                            <CheckBox x:Name="AppBrave" Tag="BraveSoftware.BraveBrowser" Content="Brave Browser" />
-                                            <CheckBox x:Name="AppFirefox" Tag="Mozilla.Firefox" Content="Mozilla Firefox" />
-                                            <CheckBox x:Name="AppOperaGX" Tag="Opera.OperaGX" Content="Opera GX" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- MÍDIA & MENSAGENS -->
-                                    <Border Grid.Column="2" Background="{StaticResource InsetBgBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
-                                        <StackPanel>
-                                            <TextBlock Text="🎮 Mídia &amp; Mensagens" FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
-                                            <CheckBox x:Name="AppSpotify" Tag="Spotify.Spotify" Content="Spotify" IsChecked="True" />
-                                            <CheckBox x:Name="AppDiscord" Tag="Discord.Discord" Content="Discord" />
-                                            <CheckBox x:Name="AppVLC" Tag="VideoLAN.VLC" Content="VLC Player" IsChecked="True" />
-                                            <CheckBox x:Name="AppSteam" Tag="Valve.Steam" Content="Steam" />
-                                            <CheckBox x:Name="AppWhatsApp" Tag="WhatsApp.WhatsApp" Content="WhatsApp Desktop" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- DEV & UTILITÁRIOS -->
-                                    <Border Grid.Column="4" Background="{StaticResource InsetBgBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
-                                        <StackPanel>
-                                            <TextBlock Text="💻 Ferramentas &amp; Dev" FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
-                                            <CheckBox x:Name="AppVSCode" Tag="Microsoft.VisualStudioCode" Content="VS Code" IsChecked="True" />
-                                            <CheckBox x:Name="AppGit" Tag="Git.Git" Content="Git for Windows" IsChecked="True" />
-                                            <CheckBox x:Name="App7Zip" Tag="7zip.7zip" Content="7-Zip" IsChecked="True" />
-                                            <CheckBox x:Name="AppNotepadPlusPlus" Tag="Notepad++.Notepad++" Content="Notepad++" />
-                                            <CheckBox x:Name="AppDocker" Tag="Docker.DockerDesktop" Content="Docker Desktop" />
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
+                                <!-- Grupos e caixas gerados de QuickInstallCatalog (padrão ou %APPDATA%/WinTerminalTools/apps.json) -->
+                                <UniformGrid x:Name="QuickInstallGrid" Columns="3" />
                             </StackPanel>
                         </Border>
 
@@ -288,7 +310,28 @@
 
                 <!-- ================= ABA 4: SISTEMA E REPARO ================= -->
                 <ScrollViewer x:Name="PanelSistema" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
-                    <StackPanel x:Name="SystemSections" />
+                    <StackPanel>
+                        <StackPanel x:Name="SystemSections" />
+
+                        <!-- DESLIGAR / REINICIAR COM TEMPO ESCOLHIDO -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="⏰ Desligar ou Reiniciar Programado" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="De 0 a 1440 minutos (24 h). Para desistir, use &quot;Cancelar Desligamento&quot; acima." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <WrapPanel>
+                                    <TextBlock Text="Daqui a" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <TextBox x:Name="TxtMinutosEnergia" Text="60" Width="70" Height="34" PreviewMouseWheel="TextBox_BloquearScrollMouse" />
+                                    <TextBlock Text="minutos:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="6,0,10,0" />
+                                    <Button Click="BtnDesligarProgramado_Click" Height="34" Padding="14,0" Margin="0,0,8,0">
+                                        <TextBlock Text="⏻ Desligar" Foreground="{StaticResource DangerTextBrush}" />
+                                    </Button>
+                                    <Button Click="BtnReiniciarProgramado_Click" Height="34" Padding="14,0">
+                                        <TextBlock Text="🔁 Reiniciar" Foreground="{StaticResource DangerTextBrush}" />
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </ScrollViewer>
             </Grid>
 
