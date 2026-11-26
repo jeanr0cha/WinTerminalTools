@@ -17,6 +17,9 @@ public sealed record CommandSpec(string FileName, IReadOnlyList<string> Argument
     /// </summary>
     public bool Utf8Output { get; init; }
 
+    /// <summary>Texto mostrado no console no lugar da linha de comando completa (ex.: sem o prefixo técnico do PowerShell).</summary>
+    public string? DisplayOverride { get; init; }
+
     public static CommandSpec Create(string fileName, params string[] arguments) => new(fileName, arguments);
 
     /// <summary>Texto exibido no console (apenas informativo).</summary>
@@ -24,6 +27,9 @@ public sealed record CommandSpec(string FileName, IReadOnlyList<string> Argument
     {
         get
         {
+            if (DisplayOverride != null)
+                return DisplayOverride;
+
             var text = Arguments.Count == 0
                 ? FileName
                 : $"{FileName} {string.Join(' ', Arguments.Select(a => a.Contains(' ') ? $"\"{a}\"" : a))}";

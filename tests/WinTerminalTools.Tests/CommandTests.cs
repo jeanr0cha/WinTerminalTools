@@ -26,6 +26,15 @@ public class CommandTests
     }
 
     [Fact]
+    public void ScriptPowerShell_MostraSoOScriptNoConsole()
+    {
+        var spec = CommandCatalog.DiskSpace();
+        Assert.StartsWith("powershell> Get-Volume", spec.Display);
+        Assert.DoesNotContain("ProgressPreference", spec.Display);
+        Assert.Contains("ProgressPreference", spec.Arguments[^1]); // mas continua sendo executado
+    }
+
+    [Fact]
     public void SenhaWifi_NomeComEspacoViraUmUnicoArgumento()
     {
         var spec = CommandCatalog.WifiPassword("Minha Casa 5G");

@@ -24,6 +24,8 @@ public partial class MainWindow : Window
     private bool _isRunning;
     private readonly bool _isAdmin;
     private readonly List<CheckBox> _appCheckBoxes = new();
+    private readonly UserSettingsStore _settingsStore = new(UserSettingsStore.DefaultPath);
+    private readonly UserSettings _settings;
     private readonly ConcurrentQueue<string> _pendingOutput = new();
     private readonly DispatcherTimer _flushTimer;
 
@@ -38,12 +40,15 @@ public partial class MainWindow : Window
         _flushTimer.Tick += (_, _) => FlushOutput();
 
         _isAdmin = EhAdministrador();
+        _settings = _settingsStore.Load();
 
         Title = $"WinTerminalTools v{AppInfo.Version}";
         TxtVersao.Text = $"v{AppInfo.Version}";
 
         ConstruirSecoesDoCatalogo();
         CarregarListaApps(avisarErro: false);
+        AtualizarFavoritos();
+        AtualizarHistorico();
         CarregarIconeSeguro();
         VerificarPermissaoAdministrador();
         ExibirMensagemBoasVindas();
@@ -129,7 +134,8 @@ public partial class MainWindow : Window
         sb.AppendLine("• Escolha um comando nas categorias ao lado para executar em tempo real.");
         sb.AppendLine("• Use a aba 'Instalação Rápida & Winget' para verificar updates ou instalar apps.");
         sb.AppendLine("• Comandos com impacto no sistema exigem confirmação com aviso de risco.");
-        sb.AppendLine("• Todo comando pode ser interrompido a qualquer instante clicando em [Cancelar Execução].");
+        sb.AppendLine("• Todo comando pode ser interrompido a qualquer instante clicando em [Cancelar Execução] ou com Esc.");
+        sb.AppendLine("• Botão direito num comando: favoritar. Atalhos: Ctrl+F busca, Ctrl+L limpa, Ctrl+S salva.");
         sb.AppendLine();
         sb.AppendLine("────────────────────────────────────");
         TxtConsoleOutput.Text = sb.ToString();
@@ -212,10 +218,129 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 8, 8),
             Padding = new Thickness(12, 8, 12, 8),
             HorizontalContentAlignment = HorizontalAlignment.Left,
-            ToolTip = string.Join("\n", definicao.Steps.Select(s => "$ " + s.Display))
+            ToolTip = string.Join("\n", definicao.Steps.Select(s => "$ " + s.Display)) +
+                      "\n\nBotão direito: favoritar"
         };
         botao.Click += BtnDefinicao_Click;
+
+        // O texto do menu é decidido na hora de abrir, porque o mesmo comando aparece em duas abas.
+        var itemFavorito = new MenuItem();
+        itemFavorito.Click += (_, _) => AlternarFavorito(definicao);
+        botao.ContextMenu = new ContextMenu { Items = { itemFavorito } };
+        botao.ContextMenuOpening += (_, _) => itemFavorito.Header = _settings.Favorites.Contains(definicao.Id)
+            ? "☆ Remover dos Favoritos"
+            : "⭐ Adicionar aos Favoritos";
         return botao;
+    }
+
+    // ================= FAVORITOS E HISTÓRICO =================
+    private void AlternarFavorito(CommandDefinition definicao)
+    {
+        var agoraFavorito = _settings.ToggleFavorite(definicao.Id);
+        SalvarPreferencias();
+        AtualizarFavoritos();
+        Escrever(agoraFavorito
+            ? $"\n⭐ '{definicao.Title}' adicionado aos Favoritos.\n"
+            : $"\n☆ '{definicao.Title}' removido dos Favoritos.\n");
+        FlushOutput();
+    }
+
+    private void AtualizarFavoritos()
+    {
+        FavoritosGrid.Children.Clear();
+        // Ignora ids que não existem mais no catálogo (ex.: comando removido numa versão nova).
+        foreach (var definicao in _settings.Favorites
+                     .Select(id => CommandCatalog.Definitions.FirstOrDefault(d => d.Id == id))
+                     .OfType<CommandDefinition>())
+        {
+            FavoritosGrid.Children.Add(CriarBotaoComando(definicao));
+        }
+
+        TxtSemFavoritos.Visibility = FavoritosGrid.Children.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void RegistrarHistorico(HistoryEntry entrada)
+    {
+        _settings.AddHistory(entrada);
+        SalvarPreferencias();
+        AtualizarHistorico();
+    }
+
+    private void AtualizarHistorico()
+    {
+        HistoricoLista.Children.Clear();
+        foreach (var entrada in _settings.History)
+        {
+            var (simbolo, cor) = entrada.Cancelled ? ("⏹", "TextMutedBrush")
+                : entrada.ExitCode == 0 ? ("✔", "AccentSecondaryBrush")
+                : ($"⚠ {entrada.ExitCode}", "WarningBrush");
+
+            var linha = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+            linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+            linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
+            linha.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            linha.Children.Add(new TextBlock
+            {
+                Text = entrada.When.ToString("dd/MM HH:mm", CultureInfo.CurrentCulture),
+                FontSize = 11,
+                Foreground = (Brush)FindResource("TextMutedBrush"),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            var texto = new TextBlock
+            {
+                Text = entrada.Display,
+                FontSize = 12,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                ToolTip = entrada.Display,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(texto, 1);
+            linha.Children.Add(texto);
+
+            var status = new TextBlock
+            {
+                Text = simbolo,
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)FindResource(cor),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(status, 2);
+            linha.Children.Add(status);
+
+            // Só comandos do catálogo podem ser repetidos, e sempre passando pela confirmação deles.
+            var definicao = entrada.DefinitionId == null
+                ? null
+                : CommandCatalog.Definitions.FirstOrDefault(d => d.Id == entrada.DefinitionId);
+            if (definicao != null)
+            {
+                var repetir = new Button { Content = "▶ Repetir", Padding = new Thickness(8, 2, 8, 2), FontSize = 11 };
+                repetir.Click += async (_, _) => await ExecutarDefinicaoAsync(definicao);
+                Grid.SetColumn(repetir, 3);
+                linha.Children.Add(repetir);
+            }
+
+            HistoricoLista.Children.Add(linha);
+        }
+
+        TxtSemHistorico.Visibility = _settings.History.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void BtnLimparHistorico_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.History.Clear();
+        SalvarPreferencias();
+        AtualizarHistorico();
+    }
+
+    private void SalvarPreferencias()
+    {
+        if (!_settingsStore.Save(_settings))
+            Escrever($"\n⚠️ Não foi possível salvar as preferências em {_settingsStore.FilePath}\n");
     }
 
     private async void BtnDefinicao_Click(object sender, RoutedEventArgs e)
@@ -238,7 +363,7 @@ public partial class MainWindow : Window
                 return;
         }
 
-        await ExecutarSequenciaAsync(definicao.Steps, pararNaFalha: !definicao.ContinueOnFailure);
+        await ExecutarSequenciaAsync(definicao.Steps, pararNaFalha: !definicao.ContinueOnFailure, definicao);
     }
 
     /// <summary>
@@ -273,27 +398,21 @@ public partial class MainWindow : Window
     }
 
     // ================= CONTROLE DE ABAS =================
+    /// <summary>Todos os painéis, na ordem das abas.</summary>
+    private ScrollViewer[] TodosOsPaineis => new[] { PanelRede, PanelApps, PanelPastas, PanelSistema, PanelFavoritos };
+
     private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (PanelRede == null || PanelApps == null || PanelPastas == null || PanelSistema == null)
+        // Chamado durante o InitializeComponent, antes de os painéis existirem.
+        if (PanelFavoritos == null)
             return;
 
-        PanelRede.Visibility = Visibility.Collapsed;
-        PanelApps.Visibility = Visibility.Collapsed;
-        PanelPastas.Visibility = Visibility.Collapsed;
-        PanelSistema.Visibility = Visibility.Collapsed;
-
-        if (MainTabControl.SelectedItem == TabRede)
-            PanelRede.Visibility = Visibility.Visible;
-        else if (MainTabControl.SelectedItem == TabApps)
-            PanelApps.Visibility = Visibility.Visible;
-        else if (MainTabControl.SelectedItem == TabPastas)
-            PanelPastas.Visibility = Visibility.Visible;
-        else if (MainTabControl.SelectedItem == TabSistema)
-            PanelSistema.Visibility = Visibility.Visible;
+        foreach (var painel in TodosOsPaineis)
+            painel.Visibility = AbaDe(painel) == MainTabControl.SelectedItem ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ================= FILTRO / BUSCA GLOBAL =================
+    /// <summary>Painéis em que a busca procura (Favoritos repete comandos das outras abas e fica de fora).</summary>
     private IEnumerable<ScrollViewer> Paineis => new[] { PanelRede, PanelApps, PanelPastas, PanelSistema };
 
     private void TxtBuscaGlobal_TextChanged(object sender, TextChangedEventArgs e)
@@ -324,7 +443,8 @@ public partial class MainWindow : Window
     private TabItem AbaDe(ScrollViewer painel) =>
         painel == PanelRede ? TabRede :
         painel == PanelApps ? TabApps :
-        painel == PanelPastas ? TabPastas : TabSistema;
+        painel == PanelPastas ? TabPastas :
+        painel == PanelSistema ? TabSistema : TabFavoritos;
 
     private void BtnLimparBusca_Click(object sender, RoutedEventArgs e)
     {
@@ -832,7 +952,7 @@ public partial class MainWindow : Window
     {
         _isRunning = ocupado;
         // Enquanto algo executa, os painéis de comandos ficam desabilitados; só o botão Cancelar atua.
-        foreach (var painel in Paineis)
+        foreach (var painel in TodosOsPaineis)
             painel.IsEnabled = !ocupado;
 
         BtnPararComando.IsEnabled = ocupado;
@@ -841,13 +961,15 @@ public partial class MainWindow : Window
     // ================= MOTOR PRINCIPAL DE EXECUÇÃO ASSÍNCRONA =================
     private Task ExecutarAsync(CommandSpec comando) => ExecutarSequenciaAsync(new[] { comando }, pararNaFalha: true);
 
-    private async Task ExecutarSequenciaAsync(IReadOnlyList<CommandSpec> comandos, bool pararNaFalha)
+    /// <param name="definicao">Comando do catálogo que originou a execução (permite repetir pelo histórico).</param>
+    private async Task ExecutarSequenciaAsync(IReadOnlyList<CommandSpec> comandos, bool pararNaFalha, CommandDefinition? definicao = null)
     {
         if (_isRunning)
             return;
 
         _currentCts = new CancellationTokenSource();
         var token = _currentCts.Token;
+        int ultimoCodigo = 0;
 
         SetOcupado(true);
         ConsoleStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0, 163, 255)); // Ciano
@@ -864,13 +986,14 @@ public partial class MainWindow : Window
                     : $"Executando: {spec.Display}";
 
                 Escrever($"\n\n$ {spec.Display}\n");
-                Escrever("────────────────────────────────────────────────────────────────────────\n");
+                Escrever("────────────────────────────────────\n");
 
                 var (resultado, erro, codigoSaida) = await CommandExecutor.ExecuteAsync(
                     spec,
                     onOutputLine: linha => Escrever(linha + "\n"),
                     onErrorLine: linha => Escrever("[ERRO] " + linha + "\n"),
                     cancellationToken: token);
+                ultimoCodigo = codigoSaida;
 
                 if (token.IsCancellationRequested)
                 {
@@ -898,11 +1021,17 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Escrever($"\n❌ Falha na execução: {ex.Message}\n");
+            ultimoCodigo = -1;
         }
         finally
         {
             _flushTimer.Stop();
             FlushOutput();
+
+            var rotulo = definicao?.Title ?? (comandos.Count > 1
+                ? $"{comandos[0].Display} (+{comandos.Count - 1})"
+                : comandos[0].Display);
+            RegistrarHistorico(new HistoryEntry(DateTime.Now, rotulo, ultimoCodigo, token.IsCancellationRequested, definicao?.Id));
 
             _currentCts.Dispose();
             _currentCts = null;
@@ -940,13 +1069,82 @@ public partial class MainWindow : Window
             try
             {
                 Clipboard.SetText(TxtConsoleOutput.Text);
-                MessageBox.Show("Saída do console copiada para a Área de Transferência com sucesso!", "Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Aviso discreto no rodapé do console, sem janela para fechar.
+                if (!_isRunning)
+                    TxtComandoAtual.Text = "📋 Saída copiada para a Área de Transferência.";
             }
             catch (System.Runtime.InteropServices.COMException)
             {
                 MessageBox.Show("A Área de Transferência está em uso por outro programa. Tente novamente.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+    }
+
+    private void BtnSalvarConsole_Click(object sender, RoutedEventArgs e) => SalvarConsole();
+
+    private void SalvarConsole()
+    {
+        FlushOutput();
+        var dialogo = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Salvar saída do console",
+            FileName = $"WinTerminalTools-{DateTime.Now:yyyy-MM-dd_HH-mm}.txt",
+            Filter = "Texto (*.txt)|*.txt",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        };
+
+        if (dialogo.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            // UTF-8 com BOM: o Bloco de Notas antigo abre com os acentos certos.
+            File.WriteAllText(dialogo.FileName, TxtConsoleOutput.Text, new UTF8Encoding(true));
+            if (!_isRunning)
+                TxtComandoAtual.Text = $"💾 Saída salva em {dialogo.FileName}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show($"Não foi possível salvar o arquivo:\n\n{ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // ================= ATALHOS DE TECLADO =================
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        var ctrl = Keyboard.Modifiers == ModifierKeys.Control;
+
+        if (ctrl && e.Key == Key.F)
+        {
+            TxtBuscaGlobal.Focus();
+            TxtBuscaGlobal.SelectAll();
+        }
+        else if (e.Key == Key.Escape && _isRunning)
+        {
+            BtnPararComando_Click(sender, e);
+        }
+        else if (e.Key == Key.Escape && TxtBuscaGlobal.Text.Length > 0)
+        {
+            TxtBuscaGlobal.Clear();
+        }
+        else if (ctrl && e.Key == Key.L)
+        {
+            BtnLimparConsole_Click(sender, e);
+        }
+        else if (ctrl && e.Key == Key.S)
+        {
+            SalvarConsole();
+        }
+        else if (ctrl && e.Key is >= Key.D1 and <= Key.D5)
+        {
+            MainTabControl.SelectedIndex = e.Key - Key.D1;
+        }
+        else
+        {
+            return;
+        }
+
+        e.Handled = true;
     }
 
     private void BtnAbrirCmd_Click(object sender, RoutedEventArgs e)

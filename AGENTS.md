@@ -48,6 +48,9 @@ Notas da Release: `docs/releases/vX.Y.Z.md`. A versão exibida na tela vem de `A
   `CommandCatalog`. Caminho digitado nunca vai como argumento do `cmd.exe`: use `WorkingDirectory`.
   Script PowerShell (`CommandCatalog.PowerShell`) só recebe entrada já validada (ex.: host do
   `NormalizeHost`, número inteiro).
+- **Preferências do usuário** (favoritos e histórico): `Core/UserSettings.cs`, gravadas em
+  `%APPDATA%WinTerminalToolssettings.json`; arquivo ausente ou corrompido nunca impede o app de abrir.
+  Repetir pelo histórico só vale para comandos do catálogo e sempre passa pela confirmação.
 - **Lista de apps da instalação rápida:** `Core/QuickInstallCatalog.cs` (padrão) ou
   `%APPDATA%\WinTerminalTools\apps.json` (personalizada pelo usuário, validada ao carregar).
 - **Execução de comandos:** sempre por `CommandSpec` (executável + lista de argumentos) e
