@@ -1,0 +1,5 @@
+framework: liz-framework
+version: 0.2.1
+commit: e04c78f
+installed_at: 2026-11-25T23:52Z
+tools: claude,codex,antigravity
