@@ -21,7 +21,7 @@ public static class CommandCatalog
     /// </summary>
     private static CommandSpec PowerShell(string script) =>
         CommandSpec.Create("powershell", "-NoProfile", "-NonInteractive", "-Command",
-            $"$ProgressPreference='SilentlyContinue'; {script}");
+            $"$ProgressPreference='SilentlyContinue'; {script}") with { DisplayOverride = $"powershell> {script}" };
 
     /// <summary>Testa se uma porta TCP responde. O host já vem validado (só letras, dígitos, '.', '-' e ':').</summary>
     public static CommandSpec TestPort(string host, int port)

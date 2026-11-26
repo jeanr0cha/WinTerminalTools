@@ -5,6 +5,7 @@
         Height="800" Width="1240"
         MinHeight="680" MinWidth="1040"
         WindowStartupLocation="CenterScreen"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Background="{StaticResource BgDarkBrush}">
 
     <Grid>
@@ -90,6 +91,7 @@
                 <TabItem Header="🚀 Instalação Rápida &amp; Winget" x:Name="TabApps" />
                 <TabItem Header="📁 Arquivos &amp; Pastas" x:Name="TabPastas" />
                 <TabItem Header="🛠️ Sistema &amp; Reparo" x:Name="TabSistema" />
+                <TabItem Header="⭐ Favoritos &amp; Recentes" x:Name="TabFavoritos" />
             </TabControl>
         </Border>
 
@@ -333,6 +335,43 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- ================= ABA 5: FAVORITOS E RECENTES ================= -->
+                <ScrollViewer x:Name="PanelFavoritos" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+                    <StackPanel>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="⭐ Favoritos" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock x:Name="TxtSemFavoritos" Text="Clique com o botão direito em qualquer comando das outras abas e escolha &quot;Adicionar aos Favoritos&quot;." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <UniformGrid x:Name="FavoritosGrid" Columns="2" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="🕘 Executados Recentemente" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                    <Button Click="BtnLimparHistorico_Click" Content="Limpar histórico" HorizontalAlignment="Right" Padding="10,4" FontSize="11" />
+                                </Grid>
+                                <TextBlock x:Name="TxtSemHistorico" Text="Nenhum comando executado ainda." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8" />
+                                <StackPanel x:Name="HistoricoLista" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="⌨️ Atalhos de Teclado" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
+                                <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" LineHeight="20">
+                                    <Run Text="Ctrl+F" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  buscar comandos" /><LineBreak />
+                                    <Run Text="Esc" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  cancelar o comando em execução (ou limpar a busca)" /><LineBreak />
+                                    <Run Text="Ctrl+L" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  limpar o console" /><LineBreak />
+                                    <Run Text="Ctrl+S" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  salvar a saída do console" /><LineBreak />
+                                    <Run Text="Ctrl+1 … Ctrl+5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text="  trocar de aba" />
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
 
             <!-- SEPARADOR VISUAL -->
@@ -361,10 +400,13 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Click="BtnCopiarConsole_Click" Padding="8,4" FontSize="11" Margin="0,0,6,0">
+                                <Button Click="BtnCopiarConsole_Click" Padding="8,4" FontSize="11" Margin="0,0,6,0" ToolTip="Copiar toda a saída">
                                     <TextBlock Text="📋 Copiar" />
                                 </Button>
-                                <Button Click="BtnLimparConsole_Click" Padding="8,4" FontSize="11">
+                                <Button Click="BtnSalvarConsole_Click" Padding="8,4" FontSize="11" Margin="0,0,6,0" ToolTip="Salvar a saída num arquivo .txt (Ctrl+S)">
+                                    <TextBlock Text="💾 Salvar" />
+                                </Button>
+                                <Button Click="BtnLimparConsole_Click" Padding="8,4" FontSize="11" ToolTip="Limpar o console (Ctrl+L)">
                                     <TextBlock Text="🧹 Limpar" />
                                 </Button>
                             </StackPanel>
