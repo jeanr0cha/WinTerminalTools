@@ -19,9 +19,13 @@ public static class CommandCatalog
     /// Script PowerShell fixo, sem barra de progresso e com tabelas largas (o padrão corta em 80 colunas).
     /// Nunca deve receber texto digitado que não tenha passado pelo InputValidator.
     /// </summary>
-    private static CommandSpec PowerShell(string script) =>
+    /// <param name="display">Resumo mostrado no console no lugar do script inteiro (ex.: o cmdlet principal).</param>
+    private static CommandSpec PowerShell(string script, string? display = null) =>
         CommandSpec.Create("powershell", "-NoProfile", "-NonInteractive", "-Command",
-            $"$ProgressPreference='SilentlyContinue'; {script}") with { DisplayOverride = $"powershell> {script}" };
+            // Saída em UTF-8 para acentos e símbolos (▸, ✔, █) chegarem intactos ao console do app.
+            "[Console]::OutputEncoding=New-Object Text.UTF8Encoding $false; " +
+            $"$ProgressPreference='SilentlyContinue'; {script}")
+            with { Utf8Output = true, DisplayOverride = $"powershell> {display ?? script}" };
 
     /// <summary>Testa se uma porta TCP responde. O host já vem validado (só letras, dígitos, '.', '-' e ':').</summary>
     public static CommandSpec TestPort(string host, int port)
@@ -29,9 +33,13 @@ public static class CommandCatalog
         if (InputValidator.NormalizeHost(host) != host)
             throw new ArgumentException("Host não validado.", nameof(host));
 
+        var portText = port.ToString(CultureInfo.InvariantCulture);
         return PowerShell(
-            $"Test-NetConnection -ComputerName '{host}' -Port {port.ToString(CultureInfo.InvariantCulture)} -WarningAction SilentlyContinue | " +
-            "Format-List ComputerName, RemoteAddress, RemotePort, TcpTestSucceeded");
+            $"$r=Test-NetConnection -ComputerName '{host}' -Port {portText} -WarningAction SilentlyContinue; " +
+            "if(-not $r.RemoteAddress){ '✖ Não foi possível encontrar o host {0} (DNS).' -f $r.ComputerName; exit 1 } " +
+            "elseif($r.TcpTestSucceeded){ '✔ Porta {0} ABERTA em {1} ({2})' -f $r.RemotePort,$r.ComputerName,$r.RemoteAddress } " +
+            "else { '✖ Porta {0} FECHADA ou bloqueada em {1} ({2})' -f $r.RemotePort,$r.ComputerName,$r.RemoteAddress; exit 1 }",
+            $"Test-NetConnection {host} -Port {portText}");
     }
 
     public static CommandSpec WifiProfiles => CommandSpec.Create("netsh", "wlan", "show", "profiles");
@@ -70,8 +78,19 @@ public static class CommandCatalog
     public static CommandSpec WingetImport(string file) =>
         Winget("import", "-i", file, "--ignore-unavailable", WingetAgreements1, WingetAgreements2);
 
+    /// <summary>Converte o HealthStatus do Windows ("Healthy"...) para português, dentro de scripts PowerShell.</summary>
+    private const string HealthPt =
+        "function Saude($s){ switch(\"$s\"){ 'Healthy'{'OK'} 'Warning'{'Atenção'} 'Unhealthy'{'Com problema'} default{\"$s\"} } }; ";
+
+    /// <summary>Uma unidade por bloco, com barra de uso, em vez de uma tabela larga.</summary>
     public static CommandSpec DiskSpace() =>
-        PowerShell("Get-Volume | Format-Table -AutoSize DriveLetter, FriendlyName, FileSystemType, HealthStatus, SizeRemaining, Size | Out-String -Width 200");
+        PowerShell(HealthPt +
+            "Get-Volume | Where-Object DriveLetter | Sort-Object DriveLetter | ForEach-Object { " +
+            "$t=$_.Size; $l=$_.SizeRemaining; $p= if($t){[math]::Round(100*($t-$l)/$t)} else {0}; $b=[math]::Round($p/5); " +
+            "'▸ {0}:  {1}' -f $_.DriveLetter, $(if($_.FileSystemLabel){$_.FileSystemLabel}else{'(sem nome)'}); " +
+            "'    {0}{1}  {2}% usado' -f ('█'*$b), ('░'*(20-$b)), $p; " +
+            "'    Livre: {0:N1} GB de {1:N1} GB · {2} · Saúde: {3}' -f ($l/1GB), ($t/1GB), $_.FileSystemType, (Saude $_.HealthStatus); '' }",
+            "Get-Volume");
 
     public static CommandSpec Sfc => CommandSpec.Create("sfc", "/scannow");
     public static CommandSpec DismRestoreHealth => CommandSpec.Create("DISM", "/Online", "/Cleanup-Image", "/RestoreHealth");
@@ -331,8 +350,13 @@ public static class CommandCatalog
                 Title = "🩺 Saúde dos Discos", Description = "Tipo (SSD/HD) e estado de cada disco físico",
                 Steps = new[]
                 {
-                    PowerShell("Get-PhysicalDisk | Format-Table -AutoSize FriendlyName, MediaType, BusType, HealthStatus, OperationalStatus, " +
-                               "@{n='Tamanho (GB)';e={[math]::Round($_.Size/1GB)}} | Out-String -Width 200")
+                    PowerShell(HealthPt +
+                               "Get-PhysicalDisk | Sort-Object DeviceId | ForEach-Object { " +
+                               "$tipo=switch(\"$($_.MediaType)\"){ 'SSD'{'SSD'} 'HDD'{'HD'} default{'Não informado'} }; " +
+                               "'▸ ' + $_.FriendlyName; " +
+                               "'    Tipo: {0} · Conexão: {1} · Tamanho: {2} GB' -f $tipo, $_.BusType, [math]::Round($_.Size/1GB); " +
+                               "'    Saúde: {0} · Estado: {1}' -f (Saude $_.HealthStatus), $_.OperationalStatus; '' }",
+                               "Get-PhysicalDisk")
                 },
                 Keywords = "disco ssd hd saúde smart"
             },
@@ -349,7 +373,8 @@ public static class CommandCatalog
                         "$antes=(Get-ChildItem $t -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum; " +
                         "Get-ChildItem $t -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; " +
                         "$depois=(Get-ChildItem $t -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum; " +
-                        "'Pasta: {0}' -f $t; 'Liberado: {0:N1} MB (arquivos em uso foram mantidos)' -f (($antes-$depois)/1MB)")
+                        "'Pasta: {0}' -f $t; '✔ Liberado: {0:N1} MB (arquivos em uso foram mantidos)' -f (($antes-$depois)/1MB)",
+                        "Remove-Item $env:TEMP\\* -Recurse -Force")
                 },
                 Risk = CommandRisk.Dangerous, Keywords = "temp temporários limpeza espaço",
                 ConfirmationTitle = "Limpar Arquivos Temporários",
@@ -364,7 +389,7 @@ public static class CommandCatalog
             {
                 Id = "recycle-bin", SectionId = "files.cleanup",
                 Title = "🗑️ Esvaziar Lixeira", Description = "Apaga definitivamente os itens da lixeira",
-                Steps = new[] { PowerShell("Clear-RecycleBin -Force -ErrorAction SilentlyContinue; 'Lixeira esvaziada.'") },
+                Steps = new[] { PowerShell("Clear-RecycleBin -Force -ErrorAction SilentlyContinue; '✔ Lixeira esvaziada.'", "Clear-RecycleBin -Force") },
                 Risk = CommandRisk.Dangerous, Keywords = "lixeira limpeza espaço",
                 ConfirmationTitle = "Esvaziar Lixeira",
                 Confirmation =
@@ -393,7 +418,8 @@ public static class CommandCatalog
                 Steps = new[]
                 {
                     PowerShell("$b=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime; $u=(Get-Date)-$b; " +
-                               "'Ligado desde {0:dd/MM/yyyy HH:mm} ({1} dia(s), {2} h e {3} min)' -f $b,$u.Days,$u.Hours,$u.Minutes")
+                               "'Ligado desde {0:dd/MM/yyyy HH:mm} ({1} dia(s), {2} h e {3} min)' -f $b,$u.Days,$u.Hours,$u.Minutes",
+                               "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime")
                 },
                 Keywords = "uptime ligado boot reinício"
             },
@@ -403,8 +429,15 @@ public static class CommandCatalog
                 Title = "🚀 Programas na Inicialização", Description = "O que abre junto com o Windows",
                 Steps = new[]
                 {
-                    PowerShell("Get-CimInstance Win32_StartupCommand | Sort-Object Name | " +
-                               "Format-Table -AutoSize Name, Command, Location | Out-String -Width 300")
+                    PowerShell("$itens=@(Get-CimInstance Win32_StartupCommand | Sort-Object Name); " +
+                               "if($itens.Count -eq 0){ 'Nenhum programa configurado para iniciar com o Windows.' } else { " +
+                               "foreach($i in $itens){ " +
+                               "$origem=switch -Wildcard ($i.Location){ 'HKU\\*'{'Registro do usuário'} 'HKCU\\*'{'Registro do usuário'} " +
+                               "'HKLM\\*'{'Registro do computador (todos os usuários)'} 'Startup'{'Pasta Inicializar do usuário'} " +
+                               "'Common Startup'{'Pasta Inicializar (todos os usuários)'} default{$i.Location} }; " +
+                               "'▸ ' + $i.Name; '    Comando: ' + $i.Command; '    Origem:  ' + $origem; '' }; " +
+                               "'Total: {0} programa(s). Para desativar: Gerenciador de Tarefas > Aplicativos de inicialização.' -f $itens.Count }",
+                               "Get-CimInstance Win32_StartupCommand")
                 },
                 Keywords = "inicialização startup boot lento"
             },
@@ -470,7 +503,8 @@ public static class CommandCatalog
                 Steps = new[]
                 {
                     PowerShell("Checkpoint-Computer -Description 'WinTerminalTools' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop; " +
-                               "'Ponto de restauração criado.'")
+                               "'✔ Ponto de restauração criado.'",
+                               "Checkpoint-Computer -Description 'WinTerminalTools'")
                 },
                 Risk = CommandRisk.Caution, RequiresAdmin = true, Keywords = "restauração backup restore",
                 ConfirmationTitle = "Criar Ponto de Restauração",
@@ -488,7 +522,9 @@ public static class CommandCatalog
                 Steps = new[]
                 {
                     PowerShell("$r=Get-ComputerRestorePoint; if(-not $r){'Nenhum ponto de restauração encontrado.'} else { " +
-                               "$r | Format-Table -AutoSize SequenceNumber, @{n='Data';e={$_.ConvertToDateTime($_.CreationTime)}}, Description | Out-String -Width 200 }")
+                               "$r | Sort-Object SequenceNumber -Descending | ForEach-Object { " +
+                               "'▸ #{0}  {1:dd/MM/yyyy HH:mm}  {2}' -f $_.SequenceNumber, $_.ConvertToDateTime($_.CreationTime), $_.Description } }",
+                               "Get-ComputerRestorePoint")
                 },
                 RequiresAdmin = true, Keywords = "restauração backup restore"
             },

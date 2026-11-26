@@ -33,7 +33,7 @@ public static class QuickInstallCatalog
         new("🌐 Navegadores", new QuickInstallApp[]
         {
             new("Google.Chrome", "Google Chrome", true),
-            new("BraveSoftware.BraveBrowser", "Brave Browser"),
+            new("Brave.Brave", "Brave Browser"),
             new("Mozilla.Firefox", "Mozilla Firefox"),
             new("Opera.OperaGX", "Opera GX"),
         }),
@@ -43,7 +43,7 @@ public static class QuickInstallCatalog
             new("Discord.Discord", "Discord"),
             new("VideoLAN.VLC", "VLC Player", true),
             new("Valve.Steam", "Steam"),
-            new("WhatsApp.WhatsApp", "WhatsApp Desktop"),
+            new("9NKSQGP7F2NH", "WhatsApp (Microsoft Store)"),
         }),
         new("💻 Ferramentas & Dev", new QuickInstallApp[]
         {
@@ -54,6 +54,17 @@ public static class QuickInstallCatalog
             new("Docker.DockerDesktop", "Docker Desktop"),
         }),
     };
+
+    /// <summary>
+    /// IDs que saíram do winget e o substituto atual. Listas salvas antes da troca são corrigidas ao carregar.
+    /// (WhatsApp agora só existe pela Microsoft Store.)
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> RenamedIds { get; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["WhatsApp.WhatsApp"] = "9NKSQGP7F2NH",
+            ["BraveSoftware.BraveBrowser"] = "Brave.Brave",
+        };
 
     public static string Serialize(IReadOnlyList<QuickInstallGroup> groups) => JsonSerializer.Serialize(groups, JsonOptions);
 
@@ -90,7 +101,12 @@ public static class QuickInstallCatalog
             }
         }
 
-        return groups;
+        return groups
+            .Select(g => g with
+            {
+                Apps = g.Apps.Select(a => RenamedIds.TryGetValue(a.Id, out var novo) ? a with { Id = novo } : a).ToList()
+            })
+            .ToList();
     }
 
     /// <summary>Carrega a lista do usuário, ou a padrão se o arquivo não existir.</summary>

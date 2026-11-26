@@ -15,6 +15,9 @@ public sealed class UserSettings
     public List<string> Favorites { get; set; } = new();
     public List<HistoryEntry> History { get; set; } = new();
 
+    /// <summary>Console quebra linhas longas (true) ou mantém tabelas alinhadas com rolagem horizontal (false).</summary>
+    public bool ConsoleWrap { get; set; } = true;
+
     /// <summary>Adiciona ou remove dos favoritos; devolve true se ficou favorito.</summary>
     public bool ToggleFavorite(string definitionId)
     {
