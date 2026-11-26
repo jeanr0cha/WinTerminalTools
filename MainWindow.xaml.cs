@@ -23,20 +23,13 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _currentCts;
     private bool _isRunning;
     private readonly bool _isAdmin;
-    private readonly CheckBox[] _appCheckBoxes;
+    private readonly List<CheckBox> _appCheckBoxes = new();
     private readonly ConcurrentQueue<string> _pendingOutput = new();
     private readonly DispatcherTimer _flushTimer;
 
     public MainWindow()
     {
         InitializeComponent();
-
-        _appCheckBoxes = new[]
-        {
-            AppChrome, AppBrave, AppFirefox, AppOperaGX,
-            AppSpotify, AppDiscord, AppVLC, AppSteam, AppWhatsApp,
-            AppVSCode, AppGit, App7Zip, AppNotepadPlusPlus, AppDocker
-        };
 
         _flushTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -50,9 +43,11 @@ public partial class MainWindow : Window
         TxtVersao.Text = $"v{AppInfo.Version}";
 
         ConstruirSecoesDoCatalogo();
+        CarregarListaApps(avisarErro: false);
         CarregarIconeSeguro();
         VerificarPermissaoAdministrador();
         ExibirMensagemBoasVindas();
+        FlushOutput(); // avisos gerados durante a montagem da tela (ex.: apps.json com erro)
     }
 
     protected override void OnClosed(EventArgs e)
@@ -423,6 +418,30 @@ public partial class MainWindow : Window
             await ExecutarAsync(CommandCatalog.Tracert(host));
     }
 
+    private async void BtnNslookup_Click(object sender, RoutedEventArgs e)
+    {
+        var host = ObterHostValido("DNS");
+        if (host != null)
+            await ExecutarAsync(CommandCatalog.Nslookup(host));
+    }
+
+    private async void BtnTestarPorta_Click(object sender, RoutedEventArgs e)
+    {
+        var host = ObterHostValido("porta");
+        if (host == null)
+            return;
+
+        var porta = InputValidator.NormalizePort(TxtPortaRede.Text);
+        if (porta == null)
+        {
+            MessageBox.Show("Digite uma porta entre 1 e 65535 (ex: 80, 443, 3389).",
+                "Porta Inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        await ExecutarAsync(CommandCatalog.TestPort(host, porta.Value));
+    }
+
     private string? ObterHostValido(string operacao)
     {
         var host = InputValidator.NormalizeHost(TxtHostRede.Text);
@@ -435,19 +454,110 @@ public partial class MainWindow : Window
         return host;
     }
 
-    // ================= WINGET: APP ESPECÍFICO, BUSCA E LOTE =================
-    private async void BtnUpgradeEspecifico_Click(object sender, RoutedEventArgs e)
+    // ================= REDE: SENHA DO WI-FI =================
+    private async void BtnSenhaWifi_Click(object sender, RoutedEventArgs e)
     {
-        string appId = TxtAppIdUpgrade.Text.Trim();
-        if (!InputValidator.IsValidWingetId(appId))
+        var perfil = InputValidator.NormalizeWifiProfile(TxtPerfilWifi.Text);
+        if (perfil == null)
         {
             MessageBox.Show(
-                "Digite um ID de aplicativo válido (ex: Git.Git, Google.Chrome). Use apenas letras, números, '.', '_', '+' e '-'.",
-                "ID Inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Digite o nome exato de uma rede Wi-Fi salva (sem aspas). Use \"Redes Wi-Fi Salvas\" para ver os nomes.",
+                "Nome da Rede", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        await ExecutarAsync(CommandCatalog.WingetUpgrade(appId));
+        var confirmacao = MessageBox.Show(
+            $"⚠️ A senha da rede \"{perfil}\" vai aparecer em texto no console (linha \"Conteúdo da Chave\").\n\n" +
+            "• Confira se ninguém está vendo sua tela.\n" +
+            "• Cuidado ao copiar o console ou compartilhar prints.\n" +
+            "• Use \"Limpar\" no console quando terminar.\n\n" +
+            "Deseja mostrar a senha?",
+            "Mostrar Senha do Wi-Fi", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (confirmacao == MessageBoxResult.Yes)
+            await ExecutarAsync(CommandCatalog.WifiPassword(perfil));
+    }
+
+    // ================= WINGET: APP ESPECÍFICO, BUSCA E LOTE =================
+    private string? ObterAppIdValido()
+    {
+        string appId = TxtAppIdUpgrade.Text.Trim();
+        if (InputValidator.IsValidWingetId(appId))
+            return appId;
+
+        MessageBox.Show(
+            "Digite um ID de aplicativo válido (ex: Git.Git, Google.Chrome). Use apenas letras, números, '.', '_', '+' e '-'.",
+            "ID Inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return null;
+    }
+
+    private async void BtnInstalarEspecifico_Click(object sender, RoutedEventArgs e)
+    {
+        var appId = ObterAppIdValido();
+        if (appId != null)
+            await ExecutarAsync(CommandCatalog.WingetInstall(appId));
+    }
+
+    private async void BtnUpgradeEspecifico_Click(object sender, RoutedEventArgs e)
+    {
+        var appId = ObterAppIdValido();
+        if (appId != null)
+            await ExecutarAsync(CommandCatalog.WingetUpgrade(appId));
+    }
+
+    private async void BtnDesinstalarEspecifico_Click(object sender, RoutedEventArgs e)
+    {
+        var appId = ObterAppIdValido();
+        if (appId == null)
+            return;
+
+        var confirmacao = MessageBox.Show(
+            $"⚠️ ATENÇÃO: Desinstalar \"{appId}\"\n\n" +
+            "O programa será removido deste computador. Configurações e dados dele podem ser apagados.\n\n" +
+            "Deseja desinstalar?",
+            "Confirmar Desinstalação", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (confirmacao == MessageBoxResult.Yes)
+            await ExecutarAsync(CommandCatalog.WingetUninstall(appId));
+    }
+
+    // ================= WINGET: BACKUP DA LISTA DE PROGRAMAS =================
+    private async void BtnExportarApps_Click(object sender, RoutedEventArgs e)
+    {
+        var dialogo = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Salvar lista de programas",
+            FileName = $"programas-{DateTime.Now:yyyy-MM-dd}.json",
+            Filter = "Lista do winget (*.json)|*.json",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        };
+
+        if (dialogo.ShowDialog(this) == true)
+            await ExecutarAsync(CommandCatalog.WingetExport(dialogo.FileName));
+    }
+
+    private async void BtnImportarApps_Click(object sender, RoutedEventArgs e)
+    {
+        var dialogo = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Escolha a lista de programas exportada",
+            Filter = "Lista do winget (*.json)|*.json",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        };
+
+        if (dialogo.ShowDialog(this) != true)
+            return;
+
+        var confirmacao = MessageBox.Show(
+            "⚠️ ATENÇÃO: Instalação em Lote a partir da Lista\n\n" +
+            $"Todos os programas de \"{Path.GetFileName(dialogo.FileName)}\" que ainda não estão instalados serão baixados e instalados.\n\n" +
+            "• Duração: pode levar bastante tempo, conforme a quantidade de programas.\n" +
+            "• Programas indisponíveis no winget são pulados.\n\n" +
+            "Deseja continuar?",
+            "Importar Lista de Programas", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (confirmacao == MessageBoxResult.Yes)
+            await ExecutarAsync(CommandCatalog.WingetImport(dialogo.FileName));
     }
 
     private async void BtnBuscarWinget_Click(object sender, RoutedEventArgs e)
@@ -465,6 +575,91 @@ public partial class MainWindow : Window
     }
 
     // ================= WINGET: INSTALAÇÃO EM LOTE =================
+    /// <summary>
+    /// Monta os grupos de caixas a partir da lista do usuário (apps.json) ou da padrão.
+    /// Se o arquivo tiver erro, mantém o que já está na tela e avisa.
+    /// </summary>
+    private void CarregarListaApps(bool avisarErro)
+    {
+        IReadOnlyList<QuickInstallGroup> grupos;
+        try
+        {
+            grupos = QuickInstallCatalog.Load(QuickInstallCatalog.UserFilePath);
+        }
+        catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+        {
+            if (avisarErro)
+            {
+                MessageBox.Show($"Não foi possível carregar a lista de apps:\n\n{ex.Message}\n\nArquivo: {QuickInstallCatalog.UserFilePath}",
+                    "Lista de Apps", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Na abertura do app, um arquivo com erro não pode deixar a aba vazia.
+            grupos = QuickInstallCatalog.Defaults;
+            Escrever($"\n⚠️ apps.json com erro ({ex.Message}). Usando a lista padrão.\n");
+        }
+
+        _appCheckBoxes.Clear();
+        QuickInstallGrid.Children.Clear();
+        QuickInstallGrid.Columns = Math.Min(3, grupos.Count);
+
+        foreach (var grupo in grupos)
+        {
+            var conteudo = new StackPanel();
+            conteudo.Children.Add(new TextBlock
+            {
+                Text = grupo.Title,
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)FindResource("AccentBrush"),
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            foreach (var app in grupo.Apps)
+            {
+                var caixa = new CheckBox { Tag = app.Id, Content = app.Name, IsChecked = app.Checked, ToolTip = app.Id };
+                _appCheckBoxes.Add(caixa);
+                conteudo.Children.Add(caixa);
+            }
+
+            QuickInstallGrid.Children.Add(new Border
+            {
+                Background = (Brush)FindResource("InsetBgBrush"),
+                BorderBrush = (Brush)FindResource("BorderDarkBrush"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(14),
+                Margin = new Thickness(0, 0, 10, 10),
+                Child = conteudo
+            });
+        }
+    }
+
+    private void BtnEditarListaApps_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            QuickInstallCatalog.EnsureUserFile(QuickInstallCatalog.UserFilePath);
+            var psi = new ProcessStartInfo { FileName = "notepad.exe", UseShellExecute = true };
+            psi.ArgumentList.Add(QuickInstallCatalog.UserFilePath);
+            Process.Start(psi);
+            Escrever($"\n✏️ Editando {QuickInstallCatalog.UserFilePath}\n   Salve o arquivo e clique em \"🔄 Recarregar\".\n");
+        }
+        catch (Exception ex)
+        {
+            Escrever($"\n❌ Não foi possível abrir a lista de apps: {ex.Message}\n");
+        }
+
+        FlushOutput();
+    }
+
+    private void BtnRecarregarListaApps_Click(object sender, RoutedEventArgs e)
+    {
+        CarregarListaApps(avisarErro: true);
+        AplicarFiltro(string.IsNullOrWhiteSpace(TxtBuscaGlobal.Text) ? null : TxtBuscaGlobal.Text.Trim());
+    }
+
     private void BtnMarcarTodos_Click(object sender, RoutedEventArgs e)
     {
         SetAllCheckBoxes(true);
@@ -577,6 +772,38 @@ public partial class MainWindow : Window
         }
 
         FlushOutput();
+    }
+
+    // ================= ENERGIA: DESLIGAR / REINICIAR PROGRAMADO =================
+    private async void BtnDesligarProgramado_Click(object sender, RoutedEventArgs e) =>
+        await AgendarEnergiaAsync("desligado", CommandCatalog.ShutdownIn);
+
+    private async void BtnReiniciarProgramado_Click(object sender, RoutedEventArgs e) =>
+        await AgendarEnergiaAsync("reiniciado", CommandCatalog.RestartIn);
+
+    private async Task AgendarEnergiaAsync(string acao, Func<TimeSpan, CommandSpec> montar)
+    {
+        var minutos = InputValidator.NormalizeMinutes(TxtMinutosEnergia.Text);
+        if (minutos == null)
+        {
+            MessageBox.Show("Digite um número de minutos entre 0 e 1440 (24 horas).",
+                "Tempo Inválido", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var quando = minutos == 0
+            ? "IMEDIATAMENTE (salve seus arquivos antes!)"
+            : $"daqui a {minutos} minuto(s), às {DateTime.Now.AddMinutes(minutos.Value):HH:mm}";
+
+        var confirmacao = MessageBox.Show(
+            $"⚠️ ATENÇÃO: o computador será {acao} {quando}.\n\n" +
+            "Programas abertos serão fechados e alterações não salvas serão perdidas.\n" +
+            "Para desistir depois, use \"🛑 Cancelar Desligamento\".\n\n" +
+            "Deseja agendar?",
+            "Agendar Energia", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (confirmacao == MessageBoxResult.Yes)
+            await ExecutarAsync(montar(TimeSpan.FromMinutes(minutos.Value)));
     }
 
     // ================= CONSOLE (saída em lote, thread-safe) =================

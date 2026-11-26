@@ -72,4 +72,46 @@ public class InputValidatorTests
     [InlineData("C:\\a\0b")]
     [InlineData("C:\\a\nb")]
     public void NormalizeFolderPath_Rejeita(string? entrada) => Assert.Null(InputValidator.NormalizeFolderPath(entrada));
+
+    [Theory]
+    [InlineData("1", 1)]
+    [InlineData(" 443 ", 443)]
+    [InlineData("65535", 65535)]
+    public void NormalizePort_Aceita(string entrada, int esperado) => Assert.Equal(esperado, InputValidator.NormalizePort(entrada));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("0")]
+    [InlineData("65536")]
+    [InlineData("-1")]
+    [InlineData("80;calc")]
+    [InlineData("4e2")]
+    public void NormalizePort_Rejeita(string? entrada) => Assert.Null(InputValidator.NormalizePort(entrada));
+
+    [Theory]
+    [InlineData("Minha Casa 5G", "Minha Casa 5G")]
+    [InlineData("  Café_Wi-Fi  ", "Café_Wi-Fi")]
+    public void NormalizeWifiProfile_Aceita(string entrada, string esperado)
+        => Assert.Equal(esperado, InputValidator.NormalizeWifiProfile(entrada));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    [InlineData("rede\" key=clear name=\"outra")]
+    [InlineData("-rede")]
+    [InlineData("a\nb")]
+    public void NormalizeWifiProfile_Rejeita(string? entrada) => Assert.Null(InputValidator.NormalizeWifiProfile(entrada));
+
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData("60", 60)]
+    [InlineData("1440", 1440)]
+    public void NormalizeMinutes_Aceita(string entrada, int esperado) => Assert.Equal(esperado, InputValidator.NormalizeMinutes(entrada));
+
+    [Theory]
+    [InlineData("1441")]
+    [InlineData("-5")]
+    [InlineData("1,5")]
+    [InlineData("abc")]
+    public void NormalizeMinutes_Rejeita(string entrada) => Assert.Null(InputValidator.NormalizeMinutes(entrada));
 }

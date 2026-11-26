@@ -16,6 +16,38 @@ public class CommandTests
         Assert.False(CommandCatalog.Sfc.Utf8Output);
     }
 
+    [Fact]
+    public void TestePorta_SoAceitaHostValidadoEPortaNumerica()
+    {
+        var spec = CommandCatalog.TestPort("google.com", 443);
+        Assert.Equal("powershell", spec.FileName);
+        Assert.Contains("-ComputerName 'google.com' -Port 443", spec.Arguments[^1]);
+        Assert.Throws<ArgumentException>(() => CommandCatalog.TestPort("a'; Remove-Item x; '", 80));
+    }
+
+    [Fact]
+    public void SenhaWifi_NomeComEspacoViraUmUnicoArgumento()
+    {
+        var spec = CommandCatalog.WifiPassword("Minha Casa 5G");
+        Assert.Equal(new[] { "wlan", "show", "profile", "name=Minha Casa 5G", "key=clear" }, spec.Arguments);
+    }
+
+    [Fact]
+    public void Reiniciar_UsaBarraREmSegundos()
+        => Assert.Equal(new[] { "/r", "/t", "1800" }, CommandCatalog.RestartIn(TimeSpan.FromMinutes(30)).Arguments);
+
+    [Fact]
+    public void WingetBackupEDesinstalar_MontamArgumentosCertos()
+    {
+        var arquivo = @"C:\Users\x\Documents\minha lista.json";
+        Assert.Equal(new[] { "export", "-o", arquivo, "--accept-source-agreements" }, CommandCatalog.WingetExport(arquivo).Arguments);
+        Assert.Contains(arquivo, CommandCatalog.WingetImport(arquivo).Arguments);
+        Assert.Equal(new[] { "uninstall", "--id", "Git.Git", "-e", "--accept-source-agreements" },
+            CommandCatalog.WingetUninstall("Git.Git").Arguments);
+        Assert.All(new[] { CommandCatalog.WingetExport(arquivo), CommandCatalog.WingetImport(arquivo), CommandCatalog.WingetList },
+            s => Assert.True(s.Utf8Output));
+    }
+
     [Theory]
     [InlineData("winget", true)]
     [InlineData("winget.exe", true)]

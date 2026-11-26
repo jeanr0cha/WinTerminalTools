@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -67,6 +68,34 @@ public static partial class InputValidator
 
         return value;
     }
+
+    /// <summary>Porta TCP entre 1 e 65535.</summary>
+    public static int? NormalizePort(string? input) =>
+        int.TryParse(input?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var port) && port is >= 1 and <= 65535
+            ? port
+            : null;
+
+    /// <summary>
+    /// Nome de um perfil de Wi-Fi salvo. Aceita espaços e acentos; recusa aspas (quebrariam o
+    /// argumento do netsh), caracteres de controle e nomes que começam com "-".
+    /// </summary>
+    public static string? NormalizeWifiProfile(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return null;
+
+        var value = input.Trim();
+        if (value.Length > 256 || value.StartsWith('-') || value.Contains('"') || value.Any(char.IsControl))
+            return null;
+
+        return value;
+    }
+
+    /// <summary>Minutos para agendar desligamento/reinício: de 0 a 1440 (24 horas).</summary>
+    public static int? NormalizeMinutes(string? input) =>
+        int.TryParse(input?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var minutes) && minutes is >= 0 and <= 1440
+            ? minutes
+            : null;
 
     /// <summary>
     /// Valida um caminho de pasta absoluto e retorna o caminho completo normalizado, ou null se inválido.
