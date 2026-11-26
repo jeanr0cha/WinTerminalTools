@@ -1,4 +1,4 @@
-# WinTerminalTools v2.0
+# WinTerminalTools v2.1
 
 Ferramenta com interface gráfica (WPF, .NET 10) para Windows 64 bits que reúne os comandos úteis do CMD e do PowerShell em botões com descrição. A saída aparece em tempo real num console embutido, qualquer execução pode ser cancelada e os comandos que mexem no sistema pedem confirmação com aviso de risco.
 
@@ -10,8 +10,8 @@ Ferramenta com interface gráfica (WPF, .NET 10) para Windows 64 bits que reúne
 
 | Aba | Comandos |
 |---|---|
-| 🌐 **Rede & IP** | ipconfig (/all, /flushdns, /displaydns, /release, /renew), getmac, arp, netstat, rotas, proxy, ping, tracert, nslookup, teste de porta, reset de Winsock e TCP/IP, reparo completo da rede, Wi-Fi atual, redes salvas e senha de uma rede salva |
-| 🚀 **Instalação Rápida & Winget** | verificar e aplicar atualizações, programas instalados, instalar/atualizar/desinstalar por ID, busca no repositório, exportar e importar a lista de programas, instalação em lote pós-formatação (lista editável) |
+| 🌐 **Rede & IP** | ipconfig (/all, /flushdns, /displaydns, /release, /renew), getmac, arp, netstat, rotas, proxy, ping, tracert, nslookup, teste de porta, reset de Winsock e TCP/IP, reparo completo da rede; **rede cabeada e dispositivos**: adaptadores (cabo/Wi-Fi, velocidade, MAC), minha conexão (IP, roteador, DNS) e quem está conectado na rede (escaneamento com IP, nome e MAC); Wi-Fi atual, redes salvas e senha de uma rede salva |
+| 🚀 **Instalação Rápida & Winget** | verificar e aplicar atualizações, programas instalados, **procurar e instalar em cartões clicáveis** (com lista de populares por categoria), instalar/atualizar/desinstalar por ID, exportar e importar a lista de programas, instalação em lote pós-formatação (lista editável) |
 | 📁 **Arquivos & Pastas** | criar pasta, listar conteúdo (dir), abrir no Explorer, espaço em disco, saúde dos discos, limpar temporários, esvaziar lixeira |
 | 🛠️ **Sistema & Reparo** | systeminfo, tasklist, tempo ligado, programas na inicialização, drivers, relatório de bateria, sfc, DISM, chkdsk, pontos de restauração, desligar/reiniciar programado, hibernar, bloquear, planos de energia |
 | ⭐ **Favoritos & Recentes** | seus comandos favoritos (botão direito em qualquer comando) e o histórico com "Repetir" |
@@ -20,11 +20,15 @@ Outros detalhes:
 
 - **Cores pelo risco:** azul só lê informações, laranja demora ou pesa no PC, vermelho altera o sistema. Os comandos marcados com 🛡️ pedem Administrador, e o app avisa **antes** de executar (oferece reabrir como admin).
 - **Busca** (Ctrl+F) por nome, descrição ou comando, sem diferenciar acentos, abrindo a aba onde encontrou.
-- **Console:** copiar, salvar em .txt (Ctrl+S), limpar (Ctrl+L), cancelar (Esc). Atalhos Ctrl+1 a Ctrl+5 trocam de aba.
+- **Console organizado:** cada comando vira um bloco com título, hora, saída em lista legível e resultado com duração (✔ / ⚠ com explicação em português). Copiar, salvar em .txt (Ctrl+S), limpar (Ctrl+L), cancelar (Esc), quebra de linha liga/desliga. Atalhos Ctrl+1 a Ctrl+5 trocam de aba.
 
 <p align="center">
-  <img src="Resources/tela-winget.png" alt="Aba Instalação Rápida & Winget" width="410"/>
-  <img src="Resources/tela-sistema.png" alt="Aba Sistema & Reparo" width="410"/>
+  <img src="Resources/tela-winget.png" alt="Procurar e instalar programas, com populares por categoria" width="410"/>
+  <img src="Resources/tela-sistema.png" alt="Aba Sistema & Reparo com o console organizado em blocos" width="410"/>
+</p>
+<p align="center">
+  <img src="Resources/tela-rede-dispositivos.png" alt="Rede cabeada e dispositivos conectados" width="410"/>
+  <img src="Resources/tela-favoritos.png" alt="Favoritos, histórico e atalhos de teclado" width="410"/>
 </p>
 
 ## Instalação
