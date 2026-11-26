@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Navigation;
@@ -44,6 +46,7 @@ public partial class MainWindow : Window
 
         _isAdmin = EhAdministrador();
 
+        ConstruirSecoesDoCatalogo();
         CarregarIconeSeguro();
         VerificarPermissaoAdministrador();
         ExibirMensagemBoasVindas();
@@ -134,6 +137,136 @@ public partial class MainWindow : Window
         TxtConsoleOutput.Text = sb.ToString();
     }
 
+    // ================= CARDS GERADOS A PARTIR DO CATÁLOGO =================
+    private void ConstruirSecoesDoCatalogo()
+    {
+        var containers = new Dictionary<CommandTab, Panel>
+        {
+            [CommandTab.Network] = NetworkSections,
+            [CommandTab.Apps] = AppsSections,
+            [CommandTab.Files] = FilesSections,
+            [CommandTab.System] = SystemSections
+        };
+
+        foreach (var secao in CommandCatalog.Sections)
+        {
+            var conteudo = new StackPanel();
+            conteudo.Children.Add(new TextBlock
+            {
+                Text = secao.Title,
+                FontSize = 15,
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)FindResource("AccentBrush"),
+                Margin = new Thickness(0, 0, 0, secao.Subtitle == null ? 12 : 4)
+            });
+
+            if (secao.Subtitle != null)
+            {
+                conteudo.Children.Add(new TextBlock
+                {
+                    Text = secao.Subtitle,
+                    FontSize = 12,
+                    Foreground = (Brush)FindResource("TextSecondaryBrush"),
+                    Margin = new Thickness(0, 0, 0, 12)
+                });
+            }
+
+            var grade = new UniformGrid { Columns = 2 };
+            foreach (var definicao in CommandCatalog.Definitions.Where(d => d.SectionId == secao.Id))
+                grade.Children.Add(CriarBotaoComando(definicao));
+            conteudo.Children.Add(grade);
+
+            containers[secao.Tab].Children.Add(new Border { Style = (Style)FindResource("CardStyle"), Child = conteudo });
+        }
+    }
+
+    private Button CriarBotaoComando(CommandDefinition definicao)
+    {
+        var corTitulo = definicao.Risk switch
+        {
+            CommandRisk.Dangerous => "DangerTextBrush",
+            CommandRisk.Caution => "WarningBrush",
+            _ => "AccentBrush"
+        };
+
+        var descricao = definicao.RequiresAdmin ? $"{definicao.Description} · 🛡️ Admin" : definicao.Description;
+
+        var conteudo = new StackPanel();
+        conteudo.Children.Add(new TextBlock
+        {
+            Text = definicao.Title,
+            FontWeight = FontWeights.Bold,
+            Foreground = (Brush)FindResource(corTitulo),
+            TextWrapping = TextWrapping.Wrap
+        });
+        conteudo.Children.Add(new TextBlock
+        {
+            Text = descricao,
+            FontSize = 11,
+            Foreground = (Brush)FindResource("TextSecondaryBrush"),
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        var botao = new Button
+        {
+            Tag = definicao,
+            Content = conteudo,
+            Margin = new Thickness(0, 0, 8, 8),
+            Padding = new Thickness(12, 8, 12, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            ToolTip = string.Join("\n", definicao.Steps.Select(s => "$ " + s.Display))
+        };
+        botao.Click += BtnDefinicao_Click;
+        return botao;
+    }
+
+    private async void BtnDefinicao_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: CommandDefinition definicao })
+            await ExecutarDefinicaoAsync(definicao);
+    }
+
+    private async Task ExecutarDefinicaoAsync(CommandDefinition definicao)
+    {
+        if (definicao.RequiresAdmin && !PodeSeguirSemAdmin(definicao.Title))
+            return;
+
+        if (definicao.Confirmation != null)
+        {
+            var icone = definicao.Risk == CommandRisk.Dangerous ? MessageBoxImage.Warning : MessageBoxImage.Information;
+            var resposta = MessageBox.Show(definicao.Confirmation, definicao.ConfirmationTitle ?? "Confirmação",
+                MessageBoxButton.YesNo, icone);
+            if (resposta != MessageBoxResult.Yes)
+                return;
+        }
+
+        await ExecutarSequenciaAsync(definicao.Steps, pararNaFalha: !definicao.ContinueOnFailure);
+    }
+
+    /// <summary>
+    /// Avisa antes de rodar um comando que precisa de Administrador. Retorna true se deve executar
+    /// mesmo assim; false se a pessoa cancelou ou escolheu reabrir o app elevado.
+    /// </summary>
+    private bool PodeSeguirSemAdmin(string comando)
+    {
+        if (_isAdmin)
+            return true;
+
+        var resposta = MessageBox.Show(
+            $"'{comando}' precisa de permissão de Administrador.\n\n" +
+            "• Sim: reabrir o WinTerminalTools como Administrador\n" +
+            "• Não: executar mesmo assim (provavelmente vai falhar)\n" +
+            "• Cancelar: voltar",
+            "Requer Administrador",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Warning);
+
+        if (resposta == MessageBoxResult.Yes)
+            ReiniciarComoAdmin();
+
+        return resposta == MessageBoxResult.No;
+    }
+
     // ================= IMPEDIR ROLAGEM VERTICAL INVISÍVEL NOS CAMPOS DE TEXTO =================
     private void TextBox_BloquearScrollMouse(object sender, MouseWheelEventArgs e)
     {
@@ -172,33 +305,28 @@ public partial class MainWindow : Window
         PlaceholderBusca.Visibility = temTexto ? Visibility.Collapsed : Visibility.Visible;
         BtnLimparBusca.Visibility = temTexto ? Visibility.Visible : Visibility.Collapsed;
 
-        string filtro = texto.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(filtro))
+        string filtro = texto.Trim();
+        if (filtro.Length == 0)
         {
             AplicarFiltro(null);
             return;
         }
 
-        // Alterna automaticamente para a aba relevante
-        if (filtro.Contains("winget") || filtro.Contains("app") || filtro.Contains("chrome") || filtro.Contains("steam") || filtro.Contains("spotify") || filtro.Contains("upgrade"))
+        // Se a aba aberta não tem nada que combine, vai para a primeira aba que tenha.
+        var encontrados = AplicarFiltro(filtro);
+        var painelAtual = Paineis.FirstOrDefault(p => AbaDe(p) == MainTabControl.SelectedItem);
+        if (painelAtual == null || encontrados[painelAtual] == 0)
         {
-            MainTabControl.SelectedItem = TabApps;
+            var primeiro = Paineis.FirstOrDefault(p => encontrados[p] > 0);
+            if (primeiro != null)
+                MainTabControl.SelectedItem = AbaDe(primeiro);
         }
-        else if (filtro.Contains("pasta") || filtro.Contains("disco") || filtro.Contains("dir") || filtro.Contains("explorer") || filtro.Contains("mkdir"))
-        {
-            MainTabControl.SelectedItem = TabPastas;
-        }
-        else if (filtro.Contains("sfc") || filtro.Contains("dism") || filtro.Contains("reparo") || filtro.Contains("system") || filtro.Contains("task") || filtro.Contains("chkdsk") || filtro.Contains("desligar"))
-        {
-            MainTabControl.SelectedItem = TabSistema;
-        }
-        else if (filtro.Contains("ip") || filtro.Contains("dns") || filtro.Contains("ping") || filtro.Contains("tracert") || filtro.Contains("mac") || filtro.Contains("arp"))
-        {
-            MainTabControl.SelectedItem = TabRede;
-        }
-
-        AplicarFiltro(filtro);
     }
+
+    private TabItem AbaDe(ScrollViewer painel) =>
+        painel == PanelRede ? TabRede :
+        painel == PanelApps ? TabApps :
+        painel == PanelPastas ? TabPastas : TabSistema;
 
     private void BtnLimparBusca_Click(object sender, RoutedEventArgs e)
     {
@@ -207,31 +335,47 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Escurece os botões que não combinam com o filtro (por Tag ou pelo texto exibido).
+    /// Escurece os botões e caixas de seleção que não combinam com o filtro e devolve quantos
+    /// combinaram em cada aba. Ignora maiúsculas e acentos ("endereco" acha "Endereço").
     /// Usa a árvore lógica, que existe mesmo para abas ainda não renderizadas.
     /// </summary>
-    private void AplicarFiltro(string? filtro)
+    private Dictionary<ScrollViewer, int> AplicarFiltro(string? filtro)
     {
+        var encontrados = new Dictionary<ScrollViewer, int>();
         foreach (var painel in Paineis)
         {
-            foreach (var btn in EnumerarBotoes(painel))
+            int total = 0;
+            foreach (var controle in EnumerarAcionaveis(painel))
             {
-                bool match = filtro == null ||
-                             (btn.Tag is string tag && tag.Contains(filtro, StringComparison.OrdinalIgnoreCase)) ||
-                             TextoDe(btn).Contains(filtro, StringComparison.OrdinalIgnoreCase);
-                btn.Opacity = match ? 1.0 : 0.25;
+                bool match = filtro == null || Contem(TextoDeBusca(controle), filtro);
+                controle.Opacity = match ? 1.0 : 0.25;
+                if (match)
+                    total++;
             }
+            encontrados[painel] = total;
         }
+        return encontrados;
     }
 
-    private static IEnumerable<Button> EnumerarBotoes(DependencyObject parent)
+    private static bool Contem(string texto, string filtro) =>
+        CultureInfo.InvariantCulture.CompareInfo.IndexOf(texto, filtro,
+            CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0;
+
+    private static string TextoDeBusca(ButtonBase controle) => controle.Tag switch
+    {
+        CommandDefinition definicao => definicao.SearchText,
+        string tag => $"{tag} {TextoDe(controle)}",
+        _ => TextoDe(controle)
+    };
+
+    private static IEnumerable<ButtonBase> EnumerarAcionaveis(DependencyObject parent)
     {
         foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
         {
-            if (child is Button btn)
-                yield return btn;
+            if (child is ButtonBase controle)
+                yield return controle;
 
-            foreach (var inner in EnumerarBotoes(child))
+            foreach (var inner in EnumerarAcionaveis(child))
                 yield return inner;
         }
     }
@@ -253,15 +397,7 @@ public partial class MainWindow : Window
         return sb.ToString();
     }
 
-    // ================= COMANDOS DE REDE =================
-    private async void BtnComando_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string comando)
-        {
-            await ExecutarAsync(CommandSpec.FromStaticCommand(comando));
-        }
-    }
-
+    // ================= REDE: PING E TRACERT =================
     private void ChipHost_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string host)
@@ -296,83 +432,7 @@ public partial class MainWindow : Window
         return host;
     }
 
-    private async void BtnRelease_Click(object sender, RoutedEventArgs e)
-    {
-        var result = MessageBox.Show(
-            "⚠️ ATENÇÃO: Liberação de Endereço IP\n\n" +
-            "O comando 'ipconfig /release' interromperá imediatamente sua conexão com a rede local e a internet.\n\n" +
-            "• Impacto: Você ficará sem internet até renovar o IP (/renew).\n" +
-            "• Risco: Downloads ou conexões ativas serão interrompidas.\n\n" +
-            "Deseja liberar seu endereço de IP agora?",
-            "Aviso de Desconexão - ipconfig /release",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (result == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(CommandCatalog.IpRelease);
-        }
-    }
-
-    private async void BtnRenew_Click(object sender, RoutedEventArgs e)
-    {
-        var result = MessageBox.Show(
-            "O comando 'ipconfig /renew' solicitará um novo endereço IP ao roteador (servidor DHCP).\n\nDeseja renovar sua conexão?",
-            "Renovar IP - ipconfig /renew",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (result == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(CommandCatalog.IpRenew);
-        }
-    }
-
-    private async void BtnRenovarCompleto_Click(object sender, RoutedEventArgs e)
-    {
-        var result = MessageBox.Show(
-            "⚠️ ATENÇÃO: Reset Completo de Conexão\n\n" +
-            "Esta ação executará o ciclo completo de liberação e renovação:\n" +
-            "1. ipconfig /release (interrompe o IP atual)\n" +
-            "2. ipconfig /renew (solicita um novo IP via DHCP)\n\n" +
-            "• Impacto: A conexão com a internet cairá por alguns segundos.\n\n" +
-            "Deseja prosseguir com o reset de conexão?",
-            "Confirmação de Reset de Conexão",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (result == MessageBoxResult.Yes)
-        {
-            // Mesmo que o release falhe, tenta o renew para não deixar a máquina sem IP.
-            await ExecutarSequenciaAsync(new[] { CommandCatalog.IpRelease, CommandCatalog.IpRenew }, pararNaFalha: false);
-        }
-    }
-
-    // ================= WINGET: CENTRAL DE ATUALIZAÇÕES =================
-    private async void BtnVerificarAtualizacoes_Click(object sender, RoutedEventArgs e)
-    {
-        // Apenas lista quais programas possuem atualizações disponíveis sem instalar nada!
-        await ExecutarAsync(CommandCatalog.WingetListUpgrades);
-    }
-
-    private async void BtnUpgradeAll_Click(object sender, RoutedEventArgs e)
-    {
-        var confirmacao = MessageBox.Show(
-            "⚠️ ATENÇÃO: Atualização Geral em Lote\n\n" +
-            "Esta ação buscará e atualizará silenciosamente TODOS os aplicativos com novas versões no seu computador.\n\n" +
-            "• Risco: Programas que estejam abertos no momento podem fechar ou reiniciar durante a atualização.\n" +
-            "• Recomendação: Feche programas importantes antes de atualizar.\n\n" +
-            "Deseja iniciar a atualização de todos os programas agora?",
-            "Aviso de Atualização em Lote",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (confirmacao == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(CommandCatalog.WingetUpgradeAll);
-        }
-    }
-
+    // ================= WINGET: APP ESPECÍFICO, BUSCA E LOTE =================
     private async void BtnUpgradeEspecifico_Click(object sender, RoutedEventArgs e)
     {
         string appId = TxtAppIdUpgrade.Text.Trim();
@@ -479,10 +539,18 @@ public partial class MainWindow : Window
         FlushOutput();
     }
 
-    private async void BtnEspacoDisco_Click(object sender, RoutedEventArgs e)
+    private async void BtnDir_Click(object sender, RoutedEventArgs e)
     {
-        // Get-Volume é moderno e nativo do Windows 10 e 11 (substitui o antigo wmic descontinuado)
-        await ExecutarAsync(CommandCatalog.DiskSpace());
+        var caminho = InputValidator.NormalizeFolderPath(TxtCaminhoPasta.Text);
+        if (caminho == null || !Directory.Exists(caminho))
+        {
+            MessageBox.Show(
+                "Digite o caminho completo de uma pasta que exista (ex: C:\\Users).",
+                "Pasta não encontrada", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        await ExecutarAsync(CommandCatalog.Dir(caminho));
     }
 
     private void BtnAbrirExplorer_Click(object sender, RoutedEventArgs e)
@@ -506,87 +574,6 @@ public partial class MainWindow : Window
         }
 
         FlushOutput();
-    }
-
-    // ================= SISTEMA E REPARO (COM ALERTAS DE RISCO) =================
-    private async void BtnSfc_Click(object sender, RoutedEventArgs e)
-    {
-        var confirm = MessageBox.Show(
-            "⚠️ ATENÇÃO: Verificação de Integridade de Arquivos (SFC)\n\n" +
-            "O comando 'sfc /scannow' examinará todos os arquivos protegidos do sistema e substituirá os arquivos corrompidos por uma cópia em cache.\n\n" +
-            "• Duração: Pode levar de 5 a 20 minutos dependendo do seu computador.\n" +
-            "• Impacto: Alto consumo de disco e processador durante o teste.\n" +
-            "• Requisito: Exige permissões de Administrador.\n\n" +
-            "Deseja iniciar a verificação agora?",
-            "Aviso de Segurança - SFC Scannow",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (confirm == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(CommandCatalog.Sfc);
-        }
-    }
-
-    private async void BtnDism_Click(object sender, RoutedEventArgs e)
-    {
-        var confirm = MessageBox.Show(
-            "⚠️ ATENÇÃO: Reparação da Imagem do Windows (DISM)\n\n" +
-            "O comando 'DISM RestoreHealth' fará o download e reparo de componentes essenciais da imagem do Windows diretamente pelo Windows Update.\n\n" +
-            "• Duração: Pode demorar entre 10 e 30 minutos.\n" +
-            "• Impacto: Alto consumo de banda de internet e processamento.\n" +
-            "• Requisito: Exige Administrador e conexão ativa com a internet.\n\n" +
-            "Deseja iniciar a restauração agora?",
-            "Aviso de Segurança - DISM RestoreHealth",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (confirm == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(CommandCatalog.DismRestoreHealth);
-        }
-    }
-
-    private async void BtnChkdsk_Click(object sender, RoutedEventArgs e)
-    {
-        var chkdsk = CommandCatalog.Chkdsk(Environment.SystemDirectory);
-        var unidade = chkdsk.Arguments[0];
-
-        var confirm = MessageBox.Show(
-            "⚠️ AVISO: Verificação de Disco (CHKDSK)\n\n" +
-            $"O comando 'chkdsk {unidade}' verificará o sistema de arquivos da unidade do Windows em modo de leitura.\n\n" +
-            "• Duração: 2 a 5 minutos.\n" +
-            "• Impacto: Acesso intensivo ao disco.\n\n" +
-            "Deseja iniciar o diagnóstico do disco?",
-            "Diagnóstico de Disco",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Information);
-
-        if (confirm == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(chkdsk);
-        }
-    }
-
-    private async void BtnDesligar1Hora_Click(object sender, RoutedEventArgs e)
-    {
-        var confirm = MessageBox.Show(
-            "⚠️ ATENÇÃO: Desligamento Agendado\n\n" +
-            "O computador será desligado automaticamente em 1 HORA (3600 segundos).\n\n" +
-            "Deseja realmente agendar o desligamento?",
-            "Agendar Desligamento",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (confirm == MessageBoxResult.Yes)
-        {
-            await ExecutarAsync(CommandCatalog.ShutdownIn(TimeSpan.FromHours(1)));
-        }
-    }
-
-    private async void BtnCancelarDesligamento_Click(object sender, RoutedEventArgs e)
-    {
-        await ExecutarAsync(CommandCatalog.ShutdownAbort);
     }
 
     // ================= CONSOLE (saída em lote, thread-safe) =================
@@ -748,7 +735,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BtnReiniciarAdmin_Click(object sender, RoutedEventArgs e)
+    private void BtnReiniciarAdmin_Click(object sender, RoutedEventArgs e) => ReiniciarComoAdmin();
+
+    private void ReiniciarComoAdmin()
     {
         try
         {

@@ -44,6 +44,11 @@ public static class CommandExecutor
             CreateNoWindow = true
         };
 
+        if (spec.WorkingDirectory != null)
+        {
+            processStartInfo.WorkingDirectory = spec.WorkingDirectory;
+        }
+
         foreach (var arg in spec.Arguments)
         {
             processStartInfo.ArgumentList.Add(arg);

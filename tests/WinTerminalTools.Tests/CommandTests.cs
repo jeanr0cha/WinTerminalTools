@@ -1,3 +1,4 @@
+using System.IO;
 using WinTerminalTools.Core;
 
 namespace WinTerminalTools.Tests;
@@ -5,19 +6,12 @@ namespace WinTerminalTools.Tests;
 public class CommandTests
 {
     [Fact]
-    public void FromStaticCommand_SeparaExecutavelEArgumentos()
+    public void Dir_PastaVaiComoDiretorioDeTrabalhoENuncaNaLinhaDeComando()
     {
-        var spec = CommandSpec.FromStaticCommand("ipconfig /all");
-        Assert.Equal("ipconfig", spec.FileName);
-        Assert.Equal(new[] { "/all" }, spec.Arguments);
-    }
-
-    [Fact]
-    public void FromStaticCommand_BuiltinsDoCmdPassamPeloCmd()
-    {
-        var spec = CommandSpec.FromStaticCommand("dir");
+        var spec = CommandCatalog.Dir(@"C:\a&calc");
         Assert.Equal("cmd.exe", spec.FileName);
         Assert.Equal(new[] { "/c", "dir" }, spec.Arguments);
+        Assert.Equal(@"C:\a&calc", spec.WorkingDirectory);
     }
 
     [Fact]
@@ -65,6 +59,24 @@ public class CommandExecutorTests
         var (output, _, code) = await CommandExecutor.ExecuteAsync(spec);
         Assert.Equal(0, code);
         Assert.Equal("ok", output);
+    }
+
+    [Fact]
+    public async Task Dir_ListaAPastaPedidaMesmoComMetacaractereNoNome()
+    {
+        // Pasta temporária com "&" no nome: se o caminho fosse para a linha de comando do cmd, quebraria.
+        var pasta = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"wtt-teste a&b-{Guid.NewGuid():N}"));
+        try
+        {
+            File.WriteAllText(Path.Combine(pasta.FullName, "marcador-wtt.txt"), "ok");
+            var (output, _, code) = await CommandExecutor.ExecuteAsync(CommandCatalog.Dir(pasta.FullName));
+            Assert.Equal(0, code);
+            Assert.Contains("marcador-wtt.txt", output);
+        }
+        finally
+        {
+            pasta.Delete(recursive: true);
+        }
     }
 
     [Fact]

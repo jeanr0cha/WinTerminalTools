@@ -102,108 +102,18 @@
             </Grid.ColumnDefinitions>
 
             <!-- LADO ESQUERDO: CONTEÚDO DAS ABAS -->
+            <!-- Os cards de comandos fixos são gerados a partir de Core/CommandCatalog.cs (Sections + Definitions)
+                 dentro dos StackPanels *Sections. Aqui ficam só os cards que dependem de algo digitado. -->
             <Grid Grid.Column="0">
                 <!-- ================= ABA 1: REDE E IP ================= -->
                 <ScrollViewer x:Name="PanelRede" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
                     <StackPanel>
-                        <!-- CARD 1: DIAGNÓSTICO E MANUTENÇÃO (2 COLUNAS LIMPAS) -->
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                        <StackPanel x:Name="NetworkSections" />
 
-                            <!-- COLUNA 1: CONSULTAS E DIAGNÓSTICO (LEITURA SEGURA) -->
-                            <Border Grid.Column="0" Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
-                                <StackPanel>
-                                    <TextBlock Text="📊 Consultas de Rede" FontSize="14" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,12" />
-
-                                    <Button Click="BtnComando_Click" Tag="ipconfig" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="📋 Meu Endereço IP (ipconfig)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Exibe adaptadores ativos e IPs básicos" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="ipconfig /all" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="🔍 Diagnóstico Completo (/all)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="DHCP, DNS, máscara de rede e leases" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="getmac /v" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="🏷️ Endereços Físicos MAC (getmac /v)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Lista placas e endereços físicos (MAC)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="arp -a" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="🌐 Dispositivos na Rede Local (arp -a)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Tabela com IPs e MACs da rede local" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="netstat -ano" Margin="0,0,0,0" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="🔌 Conexões e Portas (netstat -ano)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Portas TCP/UDP abertas e PIDs ativos" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- COLUNA 2: MANUTENÇÃO E REPARO DE DNS/IP -->
-                            <Border Grid.Column="2" Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
-                                <StackPanel>
-                                    <TextBlock Text="🛠️ Manutenção &amp; Reparo de Conexão" FontSize="14" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,12" />
-
-                                    <Button Click="BtnComando_Click" Tag="ipconfig /flushdns" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="🧹 Limpar Cache DNS (/flushdns)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Corrige falhas ao acessar sites e limpa histórico" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="ipconfig /displaydns" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="📜 Exibir Cache DNS (/displaydns)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Lista todos os sites memorizados recentemente" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <!-- Comandos com Alerta de Risco / Notificação -->
-                                    <Button Click="BtnRelease_Click" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="⚠️ Liberar Endereço IP (/release)" FontWeight="Bold" Foreground="#F59E0B" />
-                                            <TextBlock Text="Interrompe conexão temporariamente [Requer Alerta]" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnRenew_Click" Margin="0,0,0,8" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="🔄 Solicitar Novo IP (/renew)" FontWeight="Bold" Foreground="{StaticResource AccentSecondaryBrush}" />
-                                            <TextBlock Text="Reconecta e solicita novo IP via DHCP" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnRenovarCompleto_Click" Margin="0,0,0,0" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel>
-                                            <TextBlock Text="⚡ Reset Completo de Conexão (Release + Renew)" FontWeight="Bold" Foreground="#38BDF8" />
-                                            <TextBlock Text="Libera e renova IP automaticamente com aviso" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <!-- CARD 2: TESTE DE CONECTIVIDADE DIRETA -->
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <!-- TESTE DE CONECTIVIDADE DIRETA -->
+                        <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
-                                <TextBlock Text="🌐 Testes de Conectividade Direta (Ping &amp; Tracert)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10" />
+                                <TextBlock Text="🌐 Testes de Conectividade Direta (Ping &amp; Tracert)" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10" />
 
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
@@ -222,13 +132,13 @@
                                 </Grid>
 
                                 <!-- Atalhos rápidos em chips -->
-                                <StackPanel Orientation="Horizontal">
+                                <WrapPanel>
                                     <TextBlock Text="Sugestões rápidas:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                                     <Button Content="google.com" Click="ChipHost_Click" Tag="google.com" Padding="8,3" FontSize="11" Margin="0,0,6,0" />
                                     <Button Content="1.1.1.1 (Cloudflare)" Click="ChipHost_Click" Tag="1.1.1.1" Padding="8,3" FontSize="11" Margin="0,0,6,0" />
                                     <Button Content="8.8.8.8 (Google)" Click="ChipHost_Click" Tag="8.8.8.8" Padding="8,3" FontSize="11" Margin="0,0,6,0" />
                                     <Button Content="192.168.1.1 (Roteador)" Click="ChipHost_Click" Tag="192.168.1.1" Padding="8,3" FontSize="11" />
-                                </StackPanel>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -237,75 +147,37 @@
                 <!-- ================= ABA 2: WINGET / ATUALIZAÇÕES E INSTALAÇÃO ================= -->
                 <ScrollViewer x:Name="PanelApps" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
                     <StackPanel>
-                        <!-- CARD 1: CENTRAL DE ATUALIZAÇÕES DO WINGET -->
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="🔄 Central de Atualizações (Winget)" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
-                                <TextBlock Text="Verifique quais programas possuem versões novas antes de atualizar." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12" />
+                        <StackPanel x:Name="AppsSections" />
 
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Passo 1: Verificar (Sem instalar nada!) -->
-                                    <Button Grid.Column="0" Click="BtnVerificarAtualizacoes_Click" Margin="0,0,6,0" Padding="14,10" HorizontalContentAlignment="Left">
-                                        <StackPanel>
-                                            <TextBlock Text="🔍 1. Verificar Atualizações Disponíveis" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Apenas lista quais apps têm update (não instala nada)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <!-- Passo 2: Atualizar Todos (Com aviso de risco) -->
-                                    <Button Grid.Column="1" Click="BtnUpgradeAll_Click" Margin="6,0,0,0" Padding="14,10" HorizontalContentAlignment="Left">
-                                        <StackPanel>
-                                            <TextBlock Text="🔄 2. Atualizar Todos os Apps do PC" FontWeight="Bold" Foreground="{StaticResource AccentSecondaryBrush}" />
-                                            <TextBlock Text="Atualiza em lote silenciosamente com aviso prévio" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-
-                                <!-- Atualizar App Específico -->
-                                <Border Background="#16161B" CornerRadius="6" Padding="12,8" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Atualizar apenas um aplicativo:" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        <TextBox x:Name="TxtAppIdUpgrade" PreviewMouseWheel="TextBox_BloquearScrollMouse" Grid.Column="1" Text="Git.Git" Height="32" Margin="0,0,8,0" />
-                                        <Button Grid.Column="2" Click="BtnUpgradeEspecifico_Click" Style="{StaticResource PrimaryButtonStyle}" Height="32" Padding="12,0">
-                                            <TextBlock Text="⬆ Atualizar Este App" />
-                                        </Button>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
+                        <!-- ATUALIZAR APP ESPECÍFICO -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="⬆ Atualizar apenas um aplicativo (ID do winget):" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBox x:Name="TxtAppIdUpgrade" PreviewMouseWheel="TextBox_BloquearScrollMouse" Grid.Column="1" Text="Git.Git" Height="32" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Click="BtnUpgradeEspecifico_Click" Style="{StaticResource PrimaryButtonStyle}" Height="32" Padding="12,0">
+                                    <TextBlock Text="⬆ Atualizar Este App" />
+                                </Button>
+                            </Grid>
                         </Border>
 
-                        <!-- CARD 2: INSTALAÇÃO EM LOTE PÓS-FORMATAÇÃO -->
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <!-- INSTALAÇÃO EM LOTE PÓS-FORMATAÇÃO -->
+                        <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
+                                <TextBlock Text="🚀 Instalação Rápida Pós-Formatação" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="Marque os programas desejados para instalar em fila com um clique." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
 
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="🚀 Instalação Rápida Pós-Formatação" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                        <TextBlock Text="Marque os programas desejados para instalar em fila com um clique." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                    </StackPanel>
-
-                                    <Button Grid.Column="1" Click="BtnMarcarTodos_Click" Content="Selecionar Todos" Margin="0,0,6,0" Padding="10,6" FontSize="11" />
-                                    <Button Grid.Column="2" Click="BtnDesmarcarTodos_Click" Content="Desmarcar Todos" Margin="0,0,10,0" Padding="10,6" FontSize="11" />
-                                    <Button Grid.Column="3" Click="BtnInstalarApps_Click" Style="{StaticResource PrimaryButtonStyle}" Height="36" Padding="14,0">
+                                <WrapPanel Margin="0,0,0,12">
+                                    <Button Click="BtnInstalarApps_Click" Style="{StaticResource PrimaryButtonStyle}" Height="34" Padding="14,0" Margin="0,0,8,0">
                                         <TextBlock Text="🚀 Instalar Selecionados" FontWeight="Bold" />
                                     </Button>
-                                </Grid>
+                                    <Button Click="BtnMarcarTodos_Click" Content="Selecionar Todos" Margin="0,0,6,0" Padding="10,6" FontSize="11" />
+                                    <Button Click="BtnDesmarcarTodos_Click" Content="Desmarcar Todos" Padding="10,6" FontSize="11" />
+                                </WrapPanel>
 
                                 <!-- Colunas de Checkboxes -->
                                 <Grid>
@@ -318,7 +190,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- NAVEGADORES -->
-                                    <Border Grid.Column="0" Background="#16161B" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <Border Grid.Column="0" Background="{StaticResource InsetBgBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                                         <StackPanel>
                                             <TextBlock Text="🌐 Navegadores" FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
                                             <CheckBox x:Name="AppChrome" Tag="Google.Chrome" Content="Google Chrome" IsChecked="True" />
@@ -329,7 +201,7 @@
                                     </Border>
 
                                     <!-- MÍDIA & MENSAGENS -->
-                                    <Border Grid.Column="2" Background="#16161B" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <Border Grid.Column="2" Background="{StaticResource InsetBgBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                                         <StackPanel>
                                             <TextBlock Text="🎮 Mídia &amp; Mensagens" FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
                                             <CheckBox x:Name="AppSpotify" Tag="Spotify.Spotify" Content="Spotify" IsChecked="True" />
@@ -341,7 +213,7 @@
                                     </Border>
 
                                     <!-- DEV & UTILITÁRIOS -->
-                                    <Border Grid.Column="4" Background="#16161B" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <Border Grid.Column="4" Background="{StaticResource InsetBgBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                                         <StackPanel>
                                             <TextBlock Text="💻 Ferramentas &amp; Dev" FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8" />
                                             <CheckBox x:Name="AppVSCode" Tag="Microsoft.VisualStudioCode" Content="VS Code" IsChecked="True" />
@@ -355,11 +227,11 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- CARD 3: PESQUISAR QUALQUER PROGRAMA NO REPOSITÓRIO DO WINGET -->
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                        <!-- PESQUISAR QUALQUER PROGRAMA NO REPOSITÓRIO DO WINGET -->
+                        <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
-                                <TextBlock Text="🔎 Pesquisar Qualquer Programa no Repositório do Winget" FontSize="14" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
-                                <TextBlock Text="Procure e instale softwares que não estão na lista rápida (ex: obs, telegram, blender, visualstudio)." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10" />
+                                <TextBlock Text="🔎 Pesquisar Qualquer Programa no Repositório do Winget" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="Procure softwares que não estão na lista rápida (ex: obs, telegram, blender, visualstudio)." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10" />
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -379,120 +251,44 @@
                 <!-- ================= ABA 3: PASTAS E ARQUIVOS ================= -->
                 <ScrollViewer x:Name="PanelPastas" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
                     <StackPanel>
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,16">
+                        <!-- PASTA DIGITADA: CRIAR, LISTAR E ABRIR -->
+                        <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
-                                <TextBlock Text="📁 Gerenciamento de Pastas e Espaço em Disco" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,12" />
+                                <TextBlock Text="📁 Pastas" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="Digite o caminho completo de uma pasta e escolha a ação." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10" />
 
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TxtCaminhoPasta" PreviewMouseWheel="TextBox_BloquearScrollMouse" Text="C:\MinhaNovaPasta" Margin="0,0,10,0" Height="36" />
-                                    <Button Grid.Column="1" Click="BtnCriarPasta_Click" Style="{StaticResource PrimaryButtonStyle}" Height="36">
-                                        <TextBlock Text="📁 Criar Pasta (mkdir)" />
-                                    </Button>
-                                </Grid>
+                                <TextBox x:Name="TxtCaminhoPasta" PreviewMouseWheel="TextBox_BloquearScrollMouse" Text="C:\MinhaNovaPasta" Height="36" Margin="0,0,0,10" />
 
-                                <WrapPanel ItemWidth="280">
-                                    <Button Click="BtnComando_Click" Tag="dir" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="dir" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Lista arquivos e diretórios da pasta atual" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <UniformGrid Columns="3">
+                                    <Button Click="BtnCriarPasta_Click" Margin="0,0,8,0" HorizontalContentAlignment="Left" Padding="12,8">
+                                        <StackPanel>
+                                            <TextBlock Text="📁 Criar Pasta (mkdir)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                            <TextBlock Text="Cria a pasta digitada" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
                                         </StackPanel>
                                     </Button>
-
-                                    <!-- COMANDO ATUALIZADO: Substitui wmic pelo Get-Volume do Windows 11 -->
-                                    <Button Click="BtnEspacoDisco_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="📊 Espaço em Disco (Get-Volume)" FontWeight="Bold" Foreground="{StaticResource AccentSecondaryBrush}" />
-                                            <TextBlock Text="Exibe tamanho e espaço livre em cada partição" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    <Button Click="BtnDir_Click" Margin="0,0,8,0" HorizontalContentAlignment="Left" Padding="12,8">
+                                        <StackPanel>
+                                            <TextBlock Text="📄 Listar Conteúdo (dir)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                            <TextBlock Text="Lista o que há na pasta" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
                                         </StackPanel>
                                     </Button>
-
-                                    <!-- ABERTURA DIRETA DO EXPLORER -->
-                                    <Button Click="BtnAbrirExplorer_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
+                                    <Button Click="BtnAbrirExplorer_Click" HorizontalContentAlignment="Left" Padding="12,8">
+                                        <StackPanel>
                                             <TextBlock Text="📂 Abrir no Explorer" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Abre a pasta atual no Windows Explorer nativo" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <TextBlock Text="Abre a pasta no Explorer" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
                                         </StackPanel>
                                     </Button>
-                                </WrapPanel>
+                                </UniformGrid>
                             </StackPanel>
                         </Border>
+
+                        <StackPanel x:Name="FilesSections" />
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- ================= ABA 4: SISTEMA E REPARO (COM ALERTAS DE RISCO) ================= -->
+                <!-- ================= ABA 4: SISTEMA E REPARO ================= -->
                 <ScrollViewer x:Name="PanelSistema" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
-                    <StackPanel>
-                        <!-- CARD 1: DIAGNÓSTICO E REPARO PROFUNDO -->
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="🛠️ Diagnóstico e Reparo do Windows (Com Alertas de Segurança)" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,12" />
-
-                                <WrapPanel ItemWidth="280">
-                                    <Button Click="BtnSfc_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="⚠️ sfc /scannow [Requer Alerta]" FontWeight="Bold" Foreground="#F59E0B" />
-                                            <TextBlock Text="Verifica e repara arquivos corrompidos (5-15 min)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnDism_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="⚠️ DISM RestoreHealth [Requer Alerta]" FontWeight="Bold" Foreground="#F59E0B" />
-                                            <TextBlock Text="Restaura imagem do Windows via Update (10-25 min)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnChkdsk_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="🔍 Verificar Disco (chkdsk C:)" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Verifica integridade do sistema de arquivos" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="systeminfo" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="💻 systeminfo" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Especificações do PC, RAM, BIOS e versão OS" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnComando_Click" Tag="tasklist" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="📋 tasklist" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                            <TextBlock Text="Lista todos os processos ativos e consumo" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-                                </WrapPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- CARD 2: ENERGIA E DESLIGAMENTO PROGRAMADO -->
-                        <Border Background="{StaticResource SurfaceDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="8" Padding="18">
-                            <StackPanel>
-                                <TextBlock Text="⚡ Controle de Energia e Desligamento Programado" FontSize="15" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,12" />
-
-                                <WrapPanel ItemWidth="280">
-                                    <Button Click="BtnDesligar1Hora_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="⏰ Desligar em 1 Hora (shutdown /s /t 3600)" FontWeight="Bold" Foreground="#F87171" />
-                                            <TextBlock Text="Programa o computador para desligar em 60 min" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button Click="BtnCancelarDesligamento_Click" Margin="0,0,10,10" HorizontalContentAlignment="Left" Padding="12,8">
-                                        <StackPanel Margin="2">
-                                            <TextBlock Text="🛑 Cancelar Desligamento (shutdown /a)" FontWeight="Bold" Foreground="{StaticResource AccentSecondaryBrush}" />
-                                            <TextBlock Text="Cancela qualquer desligamento agendado" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Button>
-                                </WrapPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+                    <StackPanel x:Name="SystemSections" />
                 </ScrollViewer>
             </Grid>
 
