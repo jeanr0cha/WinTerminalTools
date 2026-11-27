@@ -1,0 +1,5 @@
+# Arquivos do Liz Framework (ferramenta de desenvolvimento, não fazem parte do app):
+# ficam fora da barra de linguagens do GitHub, que passa a mostrar só o código do WinTerminalTools.
+.agents/** linguist-vendored
+.claude/** linguist-vendored
+.codex/** linguist-vendored
