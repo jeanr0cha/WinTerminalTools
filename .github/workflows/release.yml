@@ -54,3 +54,14 @@ jobs:
           } else {
             gh release create $env:GITHUB_REF_NAME @zips --title "WinTerminalTools $env:GITHUB_REF_NAME" --generate-notes
           }
+
+      # Atualiza o pacote no repositório oficial do Winget (microsoft/winget-pkgs) automaticamente.
+      # Só roda se o secret WINGET_TOKEN (PAT com permissão public_repo) estiver configurado no repo
+      # e após o primeiro manifesto do pacote jeanr0cha.WinTerminalTools ser aceito no winget-pkgs.
+      - name: Atualizar pacote no Winget
+        if: ${{ secrets.WINGET_TOKEN != '' }}
+        uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: jeanr0cha.WinTerminalTools
+          installers-regex: 'WinTerminalTools\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}

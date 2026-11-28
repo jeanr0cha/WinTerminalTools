@@ -21,6 +21,9 @@ public partial class MainWindow : Window
     private const int KeepConsoleChars = 300_000;
 
     private CancellationTokenSource? _currentCts;
+    private CancellationTokenSource? _updateCts;
+    private ReleaseInfo? _availableUpdate;
+    private bool _isUpdating;
     private bool _isRunning;
     private readonly bool _isAdmin;
     private readonly List<CheckBox> _appCheckBoxes = new();
@@ -55,11 +58,13 @@ public partial class MainWindow : Window
         VerificarPermissaoAdministrador();
         ExibirMensagemBoasVindas();
         FlushOutput(); // avisos gerados durante a montagem da tela (ex.: apps.json com erro)
+        _ = VerificarAtualizacaoEmSegundoPlanoAsync();
     }
 
     protected override void OnClosed(EventArgs e)
     {
         try { _currentCts?.Cancel(); } catch { }
+        try { _updateCts?.Cancel(); } catch { }
         base.OnClosed(e);
     }
 
@@ -1400,11 +1405,17 @@ public partial class MainWindow : Window
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
+        AbrirNoNavegador(e.Uri.AbsoluteUri);
+        e.Handled = true;
+    }
+
+    private static void AbrirNoNavegador(string url)
+    {
         try
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = e.Uri.AbsoluteUri,
+                FileName = url,
                 UseShellExecute = true
             });
         }
@@ -1412,6 +1423,136 @@ public partial class MainWindow : Window
         {
             MessageBox.Show($"Não foi possível abrir o link: {ex.Message}", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-        e.Handled = true;
+    }
+
+    // ================= AUTO-UPDATE PORTÁTIL (GITHUB RELEASES) =================
+
+    private async Task VerificarAtualizacaoEmSegundoPlanoAsync()
+    {
+        _updateCts = new CancellationTokenSource();
+        var info = await AppUpdater.CheckForUpdateAsync(AppInfo.Version, cancellationToken: _updateCts.Token);
+        if (info == null)
+            return;
+
+        _availableUpdate = info;
+        var tamanho = info.ExecutableSize > 0
+            ? $" ({info.ExecutableSize / (1024.0 * 1024.0):N0} MB)"
+            : "";
+
+        TxtUpdateMessage.Text = $"✨ Nova versão v{info.Version} disponível{tamanho} — você está na v{AppInfo.Version}.";
+        UpdateBanner.Visibility = Visibility.Visible;
+    }
+
+    private void BtnVerNovidades_Click(object sender, RoutedEventArgs e)
+    {
+        if (_availableUpdate != null)
+            AbrirNoNavegador(_availableUpdate.ReleaseUrl);
+    }
+
+    private void BtnFecharBannerUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isUpdating)
+            return;
+
+        UpdateBanner.Visibility = Visibility.Collapsed;
+    }
+
+    private async void BtnAtualizarAgora_Click(object sender, RoutedEventArgs e)
+    {
+        if (_availableUpdate == null || _isUpdating)
+            return;
+
+        var info = _availableUpdate;
+        var currentExe = Environment.ProcessPath;
+
+        if (string.IsNullOrEmpty(info.ExecutableUrl) || !AppUpdater.CanSelfReplace(currentExe))
+        {
+            AbrirNoNavegador(info.ReleaseUrl);
+            return;
+        }
+
+        if (_isRunning)
+        {
+            MessageBox.Show(
+                "Há um comando em execução no console. Aguarde terminar ou cancele antes de atualizar o aplicativo.",
+                "Atualização",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmar = MessageBox.Show(
+            $"Baixar e instalar o WinTerminalTools v{info.Version} agora?\n\n" +
+            "O aplicativo será fechado por alguns segundos para trocar o executável e reabrirá automaticamente.",
+            "Atualizar WinTerminalTools",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirmar != MessageBoxResult.Yes)
+            return;
+
+        _isUpdating = true;
+        BtnAtualizarAgora.IsEnabled = false;
+        BtnFecharBannerUpdate.IsEnabled = false;
+        TxtUpdateMessage.Text = $"⬇️ Baixando v{info.Version}...";
+
+        var tempPath = currentExe! + ".new";
+        try
+        {
+            _updateCts?.Dispose();
+            _updateCts = new CancellationTokenSource();
+
+            var progress = new Progress<double>(pct =>
+                TxtUpdateMessage.Text = $"⬇️ Baixando v{info.Version}... {pct:N0}%");
+
+            await AppUpdater.DownloadExecutableAsync(
+                info.ExecutableUrl,
+                tempPath,
+                progress,
+                cancellationToken: _updateCts.Token);
+
+            TxtUpdateMessage.Text = $"🔄 Aplicando v{info.Version} e reiniciando...";
+
+            var psi = AppUpdater.CreateSwapProcessStartInfo(Environment.ProcessId, tempPath, currentExe!);
+            Process.Start(psi);
+            Application.Current.Shutdown();
+        }
+        catch (OperationCanceledException)
+        {
+            // Janela fechada durante o download.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _isUpdating = false;
+            BtnAtualizarAgora.IsEnabled = true;
+            BtnFecharBannerUpdate.IsEnabled = true;
+            TxtUpdateMessage.Text = $"✨ Nova versão v{info.Version} disponível — sem permissão para gravar na pasta atual.";
+
+            var abrir = MessageBox.Show(
+                "Sem permissão para substituir o executável nesta pasta.\n\n" +
+                "Tente executar como Administrador ou baixar manualmente pelo GitHub. Deseja abrir a página de download?",
+                "Permissão necessária",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (abrir == MessageBoxResult.Yes)
+                AbrirNoNavegador(info.ReleaseUrl);
+        }
+        catch (Exception ex)
+        {
+            _isUpdating = false;
+            BtnAtualizarAgora.IsEnabled = true;
+            BtnFecharBannerUpdate.IsEnabled = true;
+            TxtUpdateMessage.Text = $"✨ Nova versão v{info.Version} disponível — você está na v{AppInfo.Version}.";
+
+            var abrir = MessageBox.Show(
+                $"Não foi possível concluir a atualização automática:\n{ex.Message}\n\nDeseja abrir a página do GitHub para baixar manualmente?",
+                "Erro na atualização",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (abrir == MessageBoxResult.Yes)
+                AbrirNoNavegador(info.ReleaseUrl);
+        }
     }
 }
