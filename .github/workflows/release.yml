@@ -15,6 +15,8 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -59,7 +61,7 @@ jobs:
       # Só roda se o secret WINGET_TOKEN (PAT com permissão public_repo) estiver configurado no repo
       # e após o primeiro manifesto do pacote jeanr0cha.WinTerminalTools ser aceito no winget-pkgs.
       - name: Atualizar pacote no Winget
-        if: ${{ secrets.WINGET_TOKEN != '' }}
+        if: env.WINGET_TOKEN != ''
         uses: vedantmgoyal9/winget-releaser@main
         with:
           identifier: jeanr0cha.WinTerminalTools
