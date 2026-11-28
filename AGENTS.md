@@ -90,6 +90,7 @@ tempo**.
 | Especialistas | `.agents/agents/<nome>.md` |
 | Sessões de trabalho (onde parou) | `.agents/sessions/<feature>/` (`STATE.md` é o ponteiro) |
 | Documentação do produto | `docs/` (`business-context/`, `technical-context/`, `specs/`) |
+| Consumo de tokens (estimado × real) | `.agents/token-history.tsv` (`bash .agents/utils/tokens/tokens.sh report`) |
 | Pontes geradas (não editar) | `.claude/`, `.codex/agents/`, `.agents/workflows/` |
 
 ### Caminho

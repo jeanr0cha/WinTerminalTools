@@ -118,6 +118,7 @@ Toda vez que completar uma fase do plano (**checkpoint** — ver [worklog-protoc
 - **RASTREAMENTO**: Marque checkboxes na description correspondentes aos critérios completados
 - Pause e peça ao usuário para validar seu código.
 - Faça as mudanças necessárias até ser aprovado
+- **Consumo (opcional):** pergunte uma vez se o usuário quer registrar o consumo desta fase; se sim, `tokens.sh actual` e uma linha "estimado × real" (`.agents/shared/token-estimation.md`). Se ele pular, siga: nunca bloqueie a fase por isso.
 - **Flip de estado**: marque a fase concluída como `[DONE]` no `plan.md` e a próxima como `[ACTIVE]`; adicione comentários úteis (decisões, questões) para quem abordará as próximas fases.
 - **Atualize o `STATE.md.NEXT`** (fonte autoritativa): `phase`, `phase_title`, `status`, `next_action` (imperativo literal), `files_in_flight`, `validate_with`, `last_checkpoint`. Mantenha o invariante de **uma só** fase `[ACTIVE]`.
 - **Antes de `/compact` ou `/clear`**: faça flush do checkpoint primeiro — após a compactação, reler só o `STATE.md` reorienta instantaneamente.

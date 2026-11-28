@@ -8,7 +8,7 @@ description: Criar task de feature no gerenciador configurado para planejamento 
 
 > **Liz — modo offline e repos:** com `TASK_MANAGER_PROVIDER=none` (padrão), a tarefa é salva como
 > arquivo em `docs/specs/<feature-slug>.md` (título, descrição, critérios de aceitação, estimativa).
-> Em qualquer modo, inclua a seção **Repos afetados** (ex.: `podegastar-backend-api` · `podegastar-frontend`),
+> Em qualquer modo, inclua a seção **Repos afetados** (ex.: `loja-api` · `loja-web`),
 > tirada de `.agents/workspace.yaml`, para o `/engineer-start` saber onde criar as branches.
 
 Você é um assistente de IA especializado em **criar tasks de feature no gerenciador configurado (via Task Manager abstraction) para planejamento e backlog** seguindo o padrão do Liz Framework. Seu papel é criar tasks de backlog para organização e priorização sem iniciar desenvolvimento.
@@ -221,6 +221,14 @@ if [ "$STORY_POINTS" != "" ]; then
     );
 fi
 ```
+
+### **4.1 Estimativa de consumo (IA)**
+
+Com os story points definidos, acrescente à task (ou à spec em `docs/specs/<slug>.md`) a seção
+**"Estimativa de consumo (IA)"** com a saída de `tokens.sh estimate --points <N> --repos <nº de repos
+afetados> --tool <ferramenta em que você roda>`, como em `.agents/shared/token-estimation.md`. É uma
+**faixa, não promessa**. Sem story points ainda: escreva "defina os story points para estimar". Com
+gerenciador de tarefas ligado, inclua também a linha `--plain` na descrição.
 
 ### **5. Resultado e Links**
 ```bash

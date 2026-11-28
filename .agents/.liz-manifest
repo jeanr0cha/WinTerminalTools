@@ -9,6 +9,7 @@
 .agents/knowledge/gitflow-patterns.md
 .agents/knowledge/specification-driven-ai-abstraction-layer.md
 .agents/knowledge/task-manager-abstraction.md
+.agents/knowledge/token-estimation.md
 .agents/knowledge/worklog-protocol.md
 .agents/knowledge/zoho-projects-api.md
 .agents/shared/clickup-patterns.md
@@ -18,6 +19,7 @@
 .agents/shared/story-points-gate.md
 .agents/shared/task-manager-auto-update.md
 .agents/shared/task-manager-provider-detection.md
+.agents/shared/token-estimation.md
 .agents/shared/untrusted-content-provenance.md
 .agents/skills/catch-up/SKILL.md
 .agents/skills/docs-build-business-docs/SKILL.md
@@ -75,6 +77,8 @@
 .agents/utils/task-manager/types.md
 .agents/utils/task-manager/velocity-meter.py
 .agents/utils/task-manager/zoho-token.sh
+.agents/utils/tokens/README.md
+.agents/utils/tokens/tokens.sh
 .agents/utils/workspace/ws.sh
 .agents/workflows/catch-up.md
 .agents/workflows/docs-build-business-docs.md

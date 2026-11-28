@@ -424,5 +424,4 @@ resolve por **nome**, lendo uma task, e usa `is_closed_type` para o terminal. A 
 
 - Plataforma (auth, limites, escopos, sondas): [`zoho-projects-api.md`](.agents/knowledge/zoho-projects-api.md)
 - Interface: [`../interface.md`](../interface.md) · Fábrica: [`../factory.md`](../factory.md)
-- Decisão que põe o Zoho como 6º adapter: `docs/evolution/research/zoho-glpi-adapters-2026-09/`
 - Sem especialista dedicado (por critério declarado no CLAUDE.md): usar `@task-specialist`

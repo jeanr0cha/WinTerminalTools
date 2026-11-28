@@ -1,6 +1,5 @@
 # Zoho Projects (REST v3; só API, sem MCP nativo) — Onda 2, SAC-63, 2026-10-11.
-# A doc primária da Zoho foi INALCANÇÁVEL na Onda 1; as fontes aqui são as sondas do adapter (2026-09-30 e 2026-10-07)
-# e o grafo zoho-glpi-adapters-2026-09.
+# A doc primária da Zoho foi INALCANÇÁVEL na Onda 1; as fontes aqui são as sondas do adapter (2026-09-30 e 2026-10-07).
 # Declaração de capacidades do adapter — formato e semântica em ../interface.md §Capacidades.
 # Cobrada pela REGRA 103 do lint. Fonte kg: = evidência ancorada (grafo de pesquisa do core);
 # adapter: = medição datada registrada no próprio adapter; local = sem chamada ao provedor.

@@ -9,7 +9,6 @@ verified_against: "absorvida de um adotante hub em 2026-09-30, com scrub. A data
 
 # Zoho Projects API — Knowledge Base
 
-
 > **Categoria**: Platforms
 > Referência técnica da **Zoho Projects REST API V3**: autenticação OAuth 2.0 (Self Client e
 > fluxo web), geração/renovação de tokens, data centers, escopos, paginação, rate limit e erros.
@@ -425,7 +424,7 @@ Campos principais do **Create Task** [1]:
 | `start_date` / `end_date` | ISO-8601 (`yyyy-MM-dd'T'HH:mm:ss'Z'` ou com offset) |
 | `owners_and_work.owners[]` | Por `zpuid`, `zuid` ou `email` |
 | `tags`, `teams` | Objetos `add`/`remove` com ids |
-| Custom fields | Por `api_name` (ex.: `cf_glpi_ticket_id`) |
+| Custom fields | Por `api_name` (ex.: `cf_ticket_id`) |
 
 ### Webhooks e Workflow Rules [9]
 
@@ -436,8 +435,6 @@ Campos principais do **Create Task** [1]:
 - **Zoho Flow** é a alternativa low-code para ligar o Projects a apps externos [10].
 - Autenticar o webhook de saída (segredo no header/URL) e validar no receptor fica por conta do
   integrador `[INFERÊNCIA]`. A disponibilidade de webhooks pode variar por plano `[INFERÊNCIA]`.
-
-> Fluxo completo usando isto: GLPI → Zoho: chamado vira tarefa.
 
 ---
 
@@ -605,7 +602,6 @@ serve — sem ela, a conclusão teria sido "o campo não existe" e a V2 nunca se
 - **Segredos:** `ZOHO_*` no `.env`, carregado com `set -a; source .env; set +a`. Doutrina em
   secret-handling-agent. Nunca imprimir o token em log ou chat.
 - **Configuração guiada:** a configuração no `.env` (ver `.agents/utils/task-manager/README.md`) é o comando canônico para registrar as variáveis.
-- **Integrações estudadas:** GLPI → Zoho: chamado vira tarefa · KB irmã glpi-api.
 - **Frescor:** a API mudou de major (V2→V3) em 2025. Reverifique esta KB contra [1] antes de
   decisão (`/meta-kb-freshness`; doutrina verify-external-for-current).
 

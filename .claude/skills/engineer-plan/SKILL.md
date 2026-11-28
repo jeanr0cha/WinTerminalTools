@@ -27,6 +27,8 @@ O template para o plan.md é:
 <plan>
 # [NOME DA FUNCIONALIDADE]
 
+**Consumo estimado total (IA):** <soma das fases; ver "Consumo (IA)" abaixo do template>
+
 Se você está trabalhando nesta funcionalidade, atualize este plan.md E o `STATE.md.NEXT` conforme progride (ver checkpoint em [worklog-protocol.md §7](.agents/knowledge/worklog-protocol.md)).
 
 > **Estado inicial:** num plano recém-criado, a Fase 1 nasce `[ACTIVE]` (igual a `STATE.md.NEXT.phase = 1`) e as demais `[TODO]`. Ao concluir uma fase, marque-a `[DONE]`, promova a próxima a `[ACTIVE]` e atualize o `STATE.md.NEXT` (transição em [worklog-protocol.md §6-7](.agents/knowledge/worklog-protocol.md)). Invariante: **exatamente uma** fase `[ACTIVE]`.
@@ -34,6 +36,7 @@ Se você está trabalhando nesta funcionalidade, atualize este plan.md E o `STAT
 ## FASE 1 [ACTIVE]
 
 **Repo:** <nome do repo em .agents/workspace.yaml> · **Validar com:** <comando de teste/lint do repo>
+**Consumo estimado:** <saída de `tokens.sh estimate --plain` desta fase>
 
 Detalhes desta parte da funcionalidade
 
@@ -80,6 +83,8 @@ Se uma mudança atravessa repos (ex.: novo endpoint no backend usado pelo fronte
 pelo contrato: primeiro o lado que **fornece** (backend/MCP), depois quem **consome** (frontend), e
 escreva o contrato (rota, payload, tipos) na fase do fornecedor para o consumidor ler sem reabrir o
 código. O comando de validação de cada fase vem do `workspace.yaml` (`ws.sh get <repo> test`).
+
+**Consumo (IA):** em cada fase, estime com `bash .agents/utils/tokens/tokens.sh estimate --points <pontos da fase> --repos 1 --tool <ferramenta em que você roda> --plain --save --slug <feature-slug> --phase <N>` (se a fase não tiver pontos, divida os da tarefa pelo nº de fases e use o degrau mais próximo da escala 1, 2, 3, 5, 8, 13) e escreva a linha `**Consumo estimado:**` da fase. No topo, some as fases em `**Consumo estimado total (IA):**`. Fase de tamanho **G**: sugira dividi-la. É faixa, não promessa (ver `.agents/shared/token-estimation.md`).
 
 Uma vez que o plan.md esteja finalizado, informe ao humano que você está pronto para prosseguir para o próximo passo.
 

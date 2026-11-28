@@ -55,6 +55,8 @@ Os quatro agentes abaixo são **independentes** — execute-os como uma **orques
 7. **Aplicar tags** (ready-for-pr ou needs-fixes)
 8. **Atualizar progresso** pela derivação `progress` (`bash .agents/utils/task-manager/progress.sh <subtasks.tsv>`), com a linha `declared:` no comentário — nunca um % fixo à mão (até 2026-10-11 este passo gravava 90%)
 
+Se a sessão tiver consumo registrado, inclua no relatório o resumo de `bash .agents/utils/tokens/tokens.sh report --slug <feature-slug>`; sem dados, não imprima nada.
+
 Você também precisará lidar com todo o feedback que esses agentes fornecerem e fazer mudanças e correções conforme necessário.
 
 Uma vez terminado E todos os critérios de aceitação validados, me avise e peça minha permissão para abrir o Pull Request.
